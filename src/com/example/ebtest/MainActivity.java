@@ -10,11 +10,17 @@ import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
 import org.andengine.entity.modifier.ScaleModifier;
 import org.andengine.entity.modifier.SequenceEntityModifier;
+import org.andengine.entity.primitive.Line;
+import org.andengine.entity.primitive.Rectangle;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.sprite.AnimatedSprite;
 import org.andengine.entity.sprite.Sprite;
 import org.andengine.entity.util.FPSLogger;
+import org.andengine.extension.physics.box2d.PhysicsConnector;
+import org.andengine.extension.physics.box2d.PhysicsFactory;
+import org.andengine.extension.physics.box2d.PhysicsWorld;
+import org.andengine.extension.physics.box2d.util.constants.PhysicsConstants;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlasTextureRegionFactory;
@@ -24,9 +30,18 @@ import org.andengine.opengl.texture.atlas.buildable.builder.BlackPawnTextureAtla
 import org.andengine.opengl.texture.atlas.buildable.builder.ITextureAtlasBuilder.TextureAtlasBuilderException;
 import org.andengine.opengl.texture.region.ITextureRegion;
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
+import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
+import org.andengine.util.color.Color;
 import org.andengine.util.debug.Debug;
 
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.physics.box2d.Body;
+import com.badlogic.gdx.physics.box2d.FixtureDef;
+import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
+import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
+
+import android.hardware.SensorManager;
 import android.opengl.GLES20;
 import android.widget.Toast;
 
@@ -58,6 +73,9 @@ public class MainActivity extends SimpleBaseGameActivity {
 	private BitmapTextureAtlas mOnScreenControlTexture;
 	private ITextureRegion mOnScreenControlBaseTextureRegion;
 	private ITextureRegion mOnScreenControlKnobTextureRegion;
+	private PhysicsWorld mPhysicsWorld;
+	private Body testBody1;
+	private Body testBody2;
 
 	// ===========================================================
 	// Constructors
@@ -106,6 +124,8 @@ public class MainActivity extends SimpleBaseGameActivity {
 		scene.setBackground(new Background(0.09804f, 0.6274f, 0.8784f));
 
 
+		this.mPhysicsWorld = new PhysicsWorld(new Vector2(0, SensorManager.GRAVITY_EARTH), false);
+
 		final float centerX = (CAMERA_WIDTH - this.mFaceTextureRegion.getWidth()) / 2;
 		final float centerY = (CAMERA_HEIGHT - this.mFaceTextureRegion.getHeight()) / 2;
 
@@ -117,6 +137,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		scene.attachChild(face);
 
 		final AnalogOnScreenControl analogOnScreenControl = new AnalogOnScreenControl(0, CAMERA_HEIGHT - this.mOnScreenControlBaseTextureRegion.getHeight(), this.mCamera, this.mOnScreenControlBaseTextureRegion, this.mOnScreenControlKnobTextureRegion, 0.1f, 200, this.getVertexBufferObjectManager(), new IAnalogOnScreenControlListener() {
+			
 			@Override
 			public void onControlChange(final BaseOnScreenControl pBaseOnScreenControl, final float pValueX, final float pValueY) {
 				physicsHandler.setVelocity(pValueX * 100, pValueY * 100);
@@ -128,21 +149,54 @@ public class MainActivity extends SimpleBaseGameActivity {
 			}
 		});
 		analogOnScreenControl.getControlBase().setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-		analogOnScreenControl.getControlBase().setAlpha(0.5f);
+		analogOnScreenControl.getControlBase().setAlpha(0.25f);
 		analogOnScreenControl.getControlBase().setScaleCenter(0, 128);
-		analogOnScreenControl.getControlBase().setScale(1.25f);
-		analogOnScreenControl.getControlKnob().setScale(1.25f);
+		//analogOnScreenControl.getControlBase().setScale(1.25f);
+		analogOnScreenControl.getControlBase().setScale(0.5f);
+		analogOnScreenControl.getControlKnob().setScale(0.5f);
+		analogOnScreenControl.getControlKnob().setAlpha(0.25f);
 		analogOnScreenControl.refreshControlKnobPosition();
 
 		scene.setChildScene(analogOnScreenControl);
 
+		initJoints(scene);
+		
 		return scene;
 	}
 
 	// ===========================================================
 	// Methods
 	// ===========================================================
+	private void initJoints(final Scene scene) {
+		// revolute engine
+		//
+		// Create green rectangle
+		final Rectangle greenRectangle = new Rectangle(CAMERA_WIDTH/2, 10, 40, 40, getVertexBufferObjectManager());
+		greenRectangle.setColor(Color.GREEN);
+		scene.attachChild(greenRectangle);
 
+		// Create red rectangle
+		final Rectangle redRectangle = new Rectangle(CAMERA_WIDTH/2, 15, 120, 10, getVertexBufferObjectManager());
+		redRectangle.setColor(Color.RED);
+		scene.attachChild(redRectangle);
+
+		// Create body for green rectangle (Static)
+		final Body greenBody = PhysicsFactory.createBoxBody(mPhysicsWorld, greenRectangle, BodyType.StaticBody, PhysicsFactory.createFixtureDef(0, 0, 0));
+
+		// Create body for red rectangle (Dynamic, for our arm)
+		final Body redBody = PhysicsFactory.createBoxBody(mPhysicsWorld, redRectangle, BodyType.DynamicBody, PhysicsFactory.createFixtureDef(5, 0.5f, 0.5f));
+		mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(redRectangle, redBody, true, true));
+
+		// Create revolute joint, connecting those two bodies 
+		final RevoluteJointDef revoluteJointDef = new RevoluteJointDef();
+		revoluteJointDef.initialize(greenBody, redBody, greenBody.getWorldCenter());
+		revoluteJointDef.enableMotor = true;
+		revoluteJointDef.motorSpeed = 10;  // fjrom -1
+ 		revoluteJointDef.maxMotorTorque = 100;
+		mPhysicsWorld.createJoint(revoluteJointDef);
+		scene.registerUpdateHandler(mPhysicsWorld);
+
+	}
 	// ===========================================================
 	// Inner and Anonymous Classes
 	// ===========================================================
