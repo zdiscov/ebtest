@@ -87,7 +87,9 @@ public class MainActivity extends SimpleBaseGameActivity {
 	//private ITextureRegion bgTextureRegion;
 	private ITextureRegion mbackgroundRegion;
 	private BitmapTextureAtlas mybackgroundTextureAtlas;
-	 Rectangle redRectangle;
+	 private Rectangle redRectangle;
+     private static int health;
+     private static Rectangle healthbar;
 	// ===========================================================
 	// Constructors
 	// ===========================================================
@@ -134,10 +136,8 @@ public class MainActivity extends SimpleBaseGameActivity {
 		mbackgroundRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mybackgroundTextureAtlas, this, "background.png",0,0);
 		this.mOnScreenControlBaseTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_base.png", 0, 0);
 		this.mOnScreenControlKnobTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_knob.png", 128, 0);
-		//this.mBgTexture = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mBackgroundTexture, this, "background.png", 0, 0);
 		this.mOnScreenControlTexture.load();
 		this.mybackgroundTextureAtlas.load();
-		//this.mBgTexture.load();
 	}
 
 	@Override
@@ -145,7 +145,6 @@ public class MainActivity extends SimpleBaseGameActivity {
 		this.mEngine.registerUpdateHandler(new FPSLogger());
 
 		final Scene scene = new Scene();
-		//scene.setBackground(new Background(0.09804f, 0.6274f, 0.8784f));
 
 		//create a Sprite object.
 		Sprite spritebackground = new Sprite(0,0,mbackgroundRegion,getVertexBufferObjectManager());
@@ -153,22 +152,42 @@ public class MainActivity extends SimpleBaseGameActivity {
 		SpriteBackground background = new SpriteBackground(0,0,0,spritebackground);
 		//set the background to scene
 		scene.setBackground(background);
-		
-		//Sprite bgSprite = new Sprite(0,0, CAMERA_WIDTH, CAMERA_HEIGHT, mBgTexture,this.getVertexBufferObjectManager());
-		//SpriteBackground background=new SpriteBackground(bgSprite);
-		//scene.setBackground(background);        
 		this.mPhysicsWorld = new PhysicsWorld(new Vector2(0, SensorManager.GRAVITY_EARTH), false);
 
+		// set walls invisible
+		final Rectangle ground = new Rectangle(0, CAMERA_HEIGHT - 2, CAMERA_WIDTH, 2, getVertexBufferObjectManager());
+		//final Rectangle roof = new Rectangle(0, 0, CAMERA_WIDTH, 2, getVertexBufferObjectManager());
+		final Rectangle left = new Rectangle(0, 0, 2, CAMERA_HEIGHT, getVertexBufferObjectManager());
+		final Rectangle right = new Rectangle(CAMERA_WIDTH - 2, 0, 2, CAMERA_HEIGHT, getVertexBufferObjectManager());
+
+		final FixtureDef wallFixtureDef = PhysicsFactory.createFixtureDef(0, 0.5f, 0.5f);
+		PhysicsFactory.createBoxBody(this.mPhysicsWorld, ground, BodyType.StaticBody, wallFixtureDef);
+		//PhysicsFactory.createBoxBody(this.mPhysicsWorld, roof, BodyType.StaticBody, wallFixtureDef);
+		PhysicsFactory.createBoxBody(this.mPhysicsWorld, left, BodyType.StaticBody, wallFixtureDef);
+		PhysicsFactory.createBoxBody(this.mPhysicsWorld, right, BodyType.StaticBody, wallFixtureDef);
+
+		scene.attachChild(ground);
+		//scene.attachChild(roof);
+		scene.attachChild(left);
+		scene.attachChild(right);
+
+		scene.registerUpdateHandler(this.mPhysicsWorld);
+
+		// end walls invisible
+		
+		
 		final float centerX = (CAMERA_WIDTH - this.mFaceTextureRegion.getWidth()) / 2;
 		final float centerY = (CAMERA_HEIGHT - this.mFaceTextureRegion.getHeight()) / 2;
 
 		final AnimatedSprite face = new AnimatedSprite(centerX, centerY, this.mFaceTextureRegion, this.getVertexBufferObjectManager());
-		face.animate(100);
+		face.animate(10);
 		final PhysicsHandler physicsHandler = new PhysicsHandler(face);
 		face.registerUpdateHandler(physicsHandler);
 
+		scene.registerUpdateHandler(this.mPhysicsWorld);
 		scene.attachChild(face);
-
+		
+		
 		final AnalogOnScreenControl analogOnScreenControl = new AnalogOnScreenControl(0, CAMERA_HEIGHT -50 - this.mOnScreenControlBaseTextureRegion.getHeight(), this.mCamera, this.mOnScreenControlBaseTextureRegion, this.mOnScreenControlKnobTextureRegion, 0.1f, 200, this.getVertexBufferObjectManager(), new IAnalogOnScreenControlListener() {
 			
 			@Override
@@ -202,16 +221,31 @@ public class MainActivity extends SimpleBaseGameActivity {
 			@Override
 			public void onUpdate(final float pSecondsElapsed) {
 				if(redRectangle.collidesWith(face)) {
+					//face.setRotation(0.5f);
+                      updatehealth(health - 5);
+
 					redRectangle.setColor(1, 0, 0);
 				} else {
-					redRectangle.setColor(0, 1, 0);
+					redRectangle.setColor(0, 0, 0);
 				}
 				
+				if(face.collidesWith(left)){
+					health = 100;
+					updatehealth(health);
+				}
 				if(!mCamera.isRectangularShapeVisible(face)) {
 					redRectangle.setColor(1, 0, 1);
+					face.setPosition(100, 100);
 				}
 			}
 		});
+		
+		/* add health bar */
+	      health = 100;
+          healthbar = new Rectangle(0,0,health * 2,20,this.getVertexBufferObjectManager());
+          healthbar.setColor(0, 1.0f, 0);
+          healthbar.setAlpha(0.4f);
+          scene.attachChild(healthbar);
 
 		return scene;
 	}
@@ -219,16 +253,26 @@ public class MainActivity extends SimpleBaseGameActivity {
 	// ===========================================================
 	// Methods
 	// ===========================================================
+	   private static void updatehealth(int newhealth){
+           health = newhealth;
+           if (health < 0)
+                   health = 0;
+           if(health < 20)
+        	   healthbar.setColor(1f,0f,0f);
+           else if(health < 140)
+        	   healthbar.setColor(1f,1f,0f);
+           healthbar.setWidth(newhealth * 5);
+	   }
 	private void initJoints(final Scene scene) {
 		// revolute engine
 		//
 		// Create green rectangle
 		final Rectangle greenRectangle = new Rectangle(CAMERA_WIDTH/2, 10, 40, 40, getVertexBufferObjectManager());
-		greenRectangle.setColor(Color.GREEN);
+		greenRectangle.setColor(Color.TRANSPARENT);
 		scene.attachChild(greenRectangle);
 
 		// Create red rectangle
-		redRectangle = new Rectangle(CAMERA_WIDTH/2, 15, 120, 10, getVertexBufferObjectManager());
+		redRectangle = new Rectangle(CAMERA_WIDTH/2, 10, 80, 5, getVertexBufferObjectManager());
 		redRectangle.setColor(Color.RED);
 		scene.attachChild(redRectangle);
 
@@ -243,7 +287,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		final RevoluteJointDef revoluteJointDef = new RevoluteJointDef();
 		revoluteJointDef.initialize(greenBody, redBody, greenBody.getWorldCenter());
 		revoluteJointDef.enableMotor = true;
-		revoluteJointDef.motorSpeed = 10;  // fjrom -1
+		revoluteJointDef.motorSpeed = 2;  // fjrom -1
  		revoluteJointDef.maxMotorTorque = 100;
 		mPhysicsWorld.createJoint(revoluteJointDef);
 		scene.registerUpdateHandler(mPhysicsWorld);
