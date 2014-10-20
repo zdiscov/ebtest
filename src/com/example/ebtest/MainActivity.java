@@ -1,15 +1,21 @@
 package com.example.ebtest;
 
+
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.camera.hud.controls.AnalogOnScreenControl;
 import org.andengine.engine.camera.hud.controls.AnalogOnScreenControl.IAnalogOnScreenControlListener;
 import org.andengine.engine.camera.hud.controls.BaseOnScreenControl;
 import org.andengine.engine.handler.IUpdateHandler;
 import org.andengine.engine.handler.physics.PhysicsHandler;
+import org.andengine.engine.handler.timer.ITimerCallback;
+import org.andengine.engine.handler.timer.TimerHandler;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.FillResolutionPolicy;
 import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
+import org.andengine.entity.modifier.AlphaModifier;
+import org.andengine.entity.modifier.ParallelEntityModifier;
+import org.andengine.entity.modifier.RotationModifier;
 import org.andengine.entity.modifier.ScaleModifier;
 import org.andengine.entity.modifier.SequenceEntityModifier;
 import org.andengine.entity.primitive.Line;
@@ -19,11 +25,17 @@ import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.scene.background.SpriteBackground;
 import org.andengine.entity.sprite.AnimatedSprite;
 import org.andengine.entity.sprite.Sprite;
+import org.andengine.entity.text.Text;
+import org.andengine.entity.text.TextOptions;
+import org.andengine.entity.text.TickerText;
+import org.andengine.entity.text.TickerText.TickerTextOptions;
 import org.andengine.entity.util.FPSLogger;
 import org.andengine.extension.physics.box2d.PhysicsConnector;
 import org.andengine.extension.physics.box2d.PhysicsFactory;
 import org.andengine.extension.physics.box2d.PhysicsWorld;
 import org.andengine.extension.physics.box2d.util.constants.PhysicsConstants;
+import org.andengine.opengl.font.Font;
+import org.andengine.opengl.font.FontFactory;
 import org.andengine.opengl.shader.ShaderProgram;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
@@ -37,6 +49,7 @@ import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.texture.region.TextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
+import org.andengine.util.HorizontalAlign;
 import org.andengine.util.color.Color;
 import org.andengine.util.debug.Debug;
 
@@ -46,6 +59,7 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
+import android.graphics.Typeface;
 import android.hardware.SensorManager;
 import android.opengl.GLES20;
 import android.widget.Toast;
@@ -90,9 +104,20 @@ public class MainActivity extends SimpleBaseGameActivity {
 	 private Rectangle redRectangle;
      private static int health;
      private static Rectangle healthbar;
+     private String[] backgroundNames = new String[]{"background.png","greenbackground.png","flowers.png"};
+     private int stageCount = 0;
+    // boolean stageEndReached = false;
+     
+     private long mDuration = 0;
+		private long mFirstExecTime = 0;
+		private long mSecondExecTime;
+		private TimerHandler timerHandler;
+		private long startTime = 120000; // 2 minutes for example
+		private Font mFont;
 	// ===========================================================
 	// Constructors
 	// ===========================================================
+		private TickerText text;
 
 	// ===========================================================
 	// Getter & Setter
@@ -127,7 +152,8 @@ public class MainActivity extends SimpleBaseGameActivity {
 			Debug.e(e);
 		}
 
-
+		this.mFont = FontFactory.create(this.getFontManager(), this.getTextureManager(), 256, 256, TextureOptions.BILINEAR, Typeface.create(Typeface.DEFAULT, Typeface.BOLD), 32);
+		this.mFont.load();
         //this.mBackgroundTexture = new BitmapTextureAtlas(this.getTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
         //this.bgTexture = new BitmapTextureAtlas(this.getTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
 		this.mOnScreenControlTexture = new BitmapTextureAtlas(this.getTextureManager(), 256, 128, TextureOptions.BILINEAR);
@@ -140,6 +166,18 @@ public class MainActivity extends SimpleBaseGameActivity {
 		this.mybackgroundTextureAtlas.load();
 	}
 
+	private SpriteBackground getSpriteBackground(String imageName)
+	{
+		mbackgroundRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mybackgroundTextureAtlas, this, imageName,0,0);
+		
+		//create a Sprite object.
+		Sprite spritebackground = new Sprite(0,0,mbackgroundRegion,getVertexBufferObjectManager());
+		//create a SpriteBackground object.
+		SpriteBackground background = new SpriteBackground(0,0,0,spritebackground);
+		//set the background to scene
+		//scene.setBackground(background);
+		return background;
+	}
 	@Override
 	public Scene onCreateScene() {
 		this.mEngine.registerUpdateHandler(new FPSLogger());
@@ -152,6 +190,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		SpriteBackground background = new SpriteBackground(0,0,0,spritebackground);
 		//set the background to scene
 		scene.setBackground(background);
+		
 		this.mPhysicsWorld = new PhysicsWorld(new Vector2(0, SensorManager.GRAVITY_EARTH), false);
 
 		// set walls invisible
@@ -193,6 +232,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 			@Override
 			public void onControlChange(final BaseOnScreenControl pBaseOnScreenControl, final float pValueX, final float pValueY) {
 				physicsHandler.setVelocity(pValueX * 100, pValueY * 100);
+				face.stopAnimation();
 			}
 
 			@Override
@@ -215,11 +255,13 @@ public class MainActivity extends SimpleBaseGameActivity {
 		
 		/* The actual collision-checking. */
 		scene.registerUpdateHandler(new IUpdateHandler() {
+
 			@Override
 			public void reset() { }
 
 			@Override
 			public void onUpdate(final float pSecondsElapsed) {
+				//if(( pSecondsElapsed > 1) && (pSecondsElapsed < 2)){
 				if(redRectangle.collidesWith(face)) {
 					//face.setRotation(0.5f);
                       updatehealth(health - 5);
@@ -230,16 +272,43 @@ public class MainActivity extends SimpleBaseGameActivity {
 				}
 				
 				if(face.collidesWith(left)){
-					health = 100;
-					updatehealth(health);
+						mSecondExecTime = System.currentTimeMillis();
+						if((mSecondExecTime - mFirstExecTime) > 1000){
+						//if(stageEndReached == false){
+						//	stageEndReached = true;
+							stageCount++;
+							health = 100;
+							updatehealth(health);
+							stageCount = stageCount % (backgroundNames.length);
+							scene.setBackground(getSpriteBackground(backgroundNames[stageCount]));
+							mFirstExecTime = System.currentTimeMillis();
+						}
+						//setBackground(scene,backgroundNames[stageCount]);
+					//}
 				}
 				if(!mCamera.isRectangularShapeVisible(face)) {
 					redRectangle.setColor(1, 0, 1);
 					face.setPosition(100, 100);
+					//stageEndReached = true;
+					
 				}
 			}
+			//}
 		});
-		
+
+		text = new TickerText(30, 60, this.mFont, "", new TickerTextOptions(HorizontalAlign.CENTER, 10), this.getVertexBufferObjectManager());
+		text.registerEntityModifier(
+			new SequenceEntityModifier(
+				new ParallelEntityModifier(
+					new AlphaModifier(10, 0.0f, 1.0f),
+					new ScaleModifier(10, 0.5f, 1.0f)
+				),
+				new RotationModifier(5, 0, 360)
+			)
+		);
+		text.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+		scene.attachChild(text);
+		createTimer();
 		/* add health bar */
 	      health = 100;
           healthbar = new Rectangle(0,0,health * 2,20,this.getVertexBufferObjectManager());
@@ -263,6 +332,21 @@ public class MainActivity extends SimpleBaseGameActivity {
         	   healthbar.setColor(1f,1f,0f);
            healthbar.setWidth(newhealth * 5);
 	   }
+	   
+	   private void createTimer() {
+		    final float period = 1; //one second
+
+		    this.getEngine().registerUpdateHandler(timerHandler = new TimerHandler(period, new ITimerCallback() {                      
+		        public void onTimePassed(final TimerHandler pTimerHandler) {
+		            timerHandler.reset();
+
+		            startTime = (long) (startTime - (period * 1000));
+		            int seconds = (int) ((startTime / 1000) % 60);
+		            int minutes = (int) ((startTime / 1000) / 60);
+		            //text.setText(String.format("%d:%02d", minutes, seconds));                            
+		        }
+		    }));
+		}
 	private void initJoints(final Scene scene) {
 		// revolute engine
 		//
@@ -290,7 +374,13 @@ public class MainActivity extends SimpleBaseGameActivity {
 		revoluteJointDef.motorSpeed = 2;  // fjrom -1
  		revoluteJointDef.maxMotorTorque = 100;
 		mPhysicsWorld.createJoint(revoluteJointDef);
+		
+		RotatingBody.createRotatingBody(CAMERA_WIDTH/2 - 100,50, getVertexBufferObjectManager(), scene, mPhysicsWorld);
+
+//		RotatingBody.createRotatingBody(CAMERA_WIDTH/4 - 50 ,100, getVertexBufferObjectManager(), scene, mPhysicsWorld);
+
 		scene.registerUpdateHandler(mPhysicsWorld);
+		
 
 	}
 	// ===========================================================
