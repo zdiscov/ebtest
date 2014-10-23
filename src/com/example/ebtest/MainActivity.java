@@ -1,6 +1,9 @@
 package com.example.ebtest;
 
 
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.camera.hud.controls.AnalogOnScreenControl;
 import org.andengine.engine.camera.hud.controls.AnalogOnScreenControl.IAnalogOnScreenControlListener;
@@ -37,6 +40,7 @@ import org.andengine.extension.physics.box2d.util.constants.PhysicsConstants;
 import org.andengine.opengl.font.Font;
 import org.andengine.opengl.font.FontFactory;
 import org.andengine.opengl.shader.ShaderProgram;
+import org.andengine.opengl.texture.ITexture;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlasTextureRegionFactory;
@@ -44,12 +48,15 @@ import org.andengine.opengl.texture.atlas.bitmap.BuildableBitmapTextureAtlas;
 import org.andengine.opengl.texture.atlas.bitmap.source.IBitmapTextureAtlasSource;
 import org.andengine.opengl.texture.atlas.buildable.builder.BlackPawnTextureAtlasBuilder;
 import org.andengine.opengl.texture.atlas.buildable.builder.ITextureAtlasBuilder.TextureAtlasBuilderException;
+import org.andengine.opengl.texture.bitmap.BitmapTexture;
 import org.andengine.opengl.texture.region.ITextureRegion;
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.texture.region.TextureRegion;
+import org.andengine.opengl.texture.region.TextureRegionFactory;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
 import org.andengine.util.HorizontalAlign;
+import org.andengine.util.adt.io.in.IInputStreamOpener;
 import org.andengine.util.color.Color;
 import org.andengine.util.debug.Debug;
 
@@ -73,7 +80,7 @@ import android.widget.Toast;
  */
 public class MainActivity extends SimpleBaseGameActivity {
 	// ===========================================================
-	// Constants
+	// Constantsfa
 	// ===========================================================
 
 	private static final int CAMERA_WIDTH = 480;
@@ -90,6 +97,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 	private ITiledTextureRegion mFaceTextureRegion;
 
 	private BitmapTextureAtlas mOnScreenControlTexture;
+	private BuildableBitmapTextureAtlas mHomeTextureAtlas;
 	private ITextureRegion mOnScreenControlBaseTextureRegion;
 	private ITextureRegion mOnScreenControlKnobTextureRegion;
 	private ITextureRegion mBgTexture;
@@ -105,6 +113,7 @@ public class MainActivity extends SimpleBaseGameActivity {
      private static int health;
      private static Rectangle healthbar;
      private String[] backgroundNames = new String[]{"background.png","greenbackground.png","flowers.png"};
+     private String[] homeNames = new String[]{"applehousesmall.png"};
      private int stageCount = 0;
     // boolean stageEndReached = false;
      
@@ -117,7 +126,9 @@ public class MainActivity extends SimpleBaseGameActivity {
 	// ===========================================================
 	// Constructors
 	// ===========================================================
-		private TickerText text;
+		private TickerText mText;
+	private ITexture mAppleHouseTexture;
+	private ITextureRegion mAppleHouseTextureRegion;
 
 	// ===========================================================
 	// Getter & Setter
@@ -142,9 +153,11 @@ public class MainActivity extends SimpleBaseGameActivity {
 		BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
 		//mybackgroundTextureAtlas = new BuildableBitmapTextureAtlas(this.getTextureManager(),1024,1024,TextureOptions.NEAREST);
 
-		this.mBitmapTextureAtlas = new BuildableBitmapTextureAtlas(this.getTextureManager(), 1024, 1024, TextureOptions.NEAREST);
-		
-		this.mFaceTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "worms_2.png", 2, 1);
+		this.mBitmapTextureAtlas = new BuildableBitmapTextureAtlas(this.getTextureManager(), 256, 128, TextureOptions.NEAREST);
+		this.mHomeTextureAtlas = new BuildableBitmapTextureAtlas(this.getTextureManager(), 1024, 1024, TextureOptions.NEAREST);
+		//actually 256x64
+		this.mFaceTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "worms1200x225.png", 3, 1);
+		//this.mFaceTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "worms_2.png", 2, 1);
 		try {
 			this.mBitmapTextureAtlas.build(new BlackPawnTextureAtlasBuilder<IBitmapTextureAtlasSource, BitmapTextureAtlas>(0, 0, 1));
 			this.mBitmapTextureAtlas.load();
@@ -154,7 +167,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 
 		this.mFont = FontFactory.create(this.getFontManager(), this.getTextureManager(), 256, 256, TextureOptions.BILINEAR, Typeface.create(Typeface.DEFAULT, Typeface.BOLD), 32);
 		this.mFont.load();
-        //this.mBackgroundTexture = new BitmapTextureAtlas(this.getTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
+        //this.mBackgroundTexture = new BitmapTextureAtlas(this.g9etTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
         //this.bgTexture = new BitmapTextureAtlas(this.getTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
 		this.mOnScreenControlTexture = new BitmapTextureAtlas(this.getTextureManager(), 256, 128, TextureOptions.BILINEAR);
 		mybackgroundTextureAtlas =  new BitmapTextureAtlas(this.getTextureManager(), 1024, 1024, TextureOptions.NEAREST);
@@ -164,6 +177,22 @@ public class MainActivity extends SimpleBaseGameActivity {
 		this.mOnScreenControlKnobTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_knob.png", 128, 0);
 		this.mOnScreenControlTexture.load();
 		this.mybackgroundTextureAtlas.load();
+		
+		try {
+			this.mAppleHouseTexture = new BitmapTexture(this.getTextureManager(), new IInputStreamOpener() {
+				@Override
+				public InputStream open() throws IOException {
+					return getAssets().open("gfx/applehousesmall.png");
+				}
+			});
+
+			this.mAppleHouseTexture.load();
+			this.mAppleHouseTextureRegion = TextureRegionFactory.extractFromTexture(this.mAppleHouseTexture);
+		} catch (IOException e) {
+			Debug.e(e);
+		}
+
+		
 	}
 
 	private SpriteBackground getSpriteBackground(String imageName)
@@ -174,8 +203,6 @@ public class MainActivity extends SimpleBaseGameActivity {
 		Sprite spritebackground = new Sprite(0,0,mbackgroundRegion,getVertexBufferObjectManager());
 		//create a SpriteBackground object.
 		SpriteBackground background = new SpriteBackground(0,0,0,spritebackground);
-		//set the background to scene
-		//scene.setBackground(background);
 		return background;
 	}
 	@Override
@@ -187,9 +214,10 @@ public class MainActivity extends SimpleBaseGameActivity {
 		//create a Sprite object.
 		Sprite spritebackground = new Sprite(0,0,mbackgroundRegion,getVertexBufferObjectManager());
 		//create a SpriteBackground object.
+		
 		SpriteBackground background = new SpriteBackground(0,0,0,spritebackground);
 		//set the background to scene
-		scene.setBackground(background);
+		//scene.setBackground(background);
 		
 		this.mPhysicsWorld = new PhysicsWorld(new Vector2(0, SensorManager.GRAVITY_EARTH), false);
 
@@ -219,26 +247,30 @@ public class MainActivity extends SimpleBaseGameActivity {
 		final float centerY = (CAMERA_HEIGHT - this.mFaceTextureRegion.getHeight()) / 2;
 
 		final AnimatedSprite face = new AnimatedSprite(centerX, centerY, this.mFaceTextureRegion, this.getVertexBufferObjectManager());
-		face.animate(10);
+		//face.setSize(0.75f, 0.75f);
+		face.setScale(0.80f);
+		face.animate(5);
 		final PhysicsHandler physicsHandler = new PhysicsHandler(face);
 		face.registerUpdateHandler(physicsHandler);
-
+		face.stopAnimation();
 		scene.registerUpdateHandler(this.mPhysicsWorld);
 		scene.attachChild(face);
-		
 		
 		final AnalogOnScreenControl analogOnScreenControl = new AnalogOnScreenControl(0, CAMERA_HEIGHT -50 - this.mOnScreenControlBaseTextureRegion.getHeight(), this.mCamera, this.mOnScreenControlBaseTextureRegion, this.mOnScreenControlKnobTextureRegion, 0.1f, 200, this.getVertexBufferObjectManager(), new IAnalogOnScreenControlListener() {
 			
 			@Override
 			public void onControlChange(final BaseOnScreenControl pBaseOnScreenControl, final float pValueX, final float pValueY) {
 				physicsHandler.setVelocity(pValueX * 100, pValueY * 100);
-				face.stopAnimation();
+				face.animate(5);
 			}
 
 			@Override
 			public void onControlClick(final AnalogOnScreenControl pAnalogOnScreenControl) {
+				face.stopAnimation();
 				face.registerEntityModifier(new SequenceEntityModifier(new ScaleModifier(0.25f, 1, 1.5f), new ScaleModifier(0.25f, 1.5f, 1)));
 			}
+			
+			
 		});
 		analogOnScreenControl.getControlBase().setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 		analogOnScreenControl.getControlBase().setAlpha(0.25f);
@@ -251,7 +283,11 @@ public class MainActivity extends SimpleBaseGameActivity {
 
 		scene.setChildScene(analogOnScreenControl);
 
-		initJoints(scene);
+		initJoints(scene,face);
+		
+		
+		RotatingBody.createRotatingBody(CAMERA_WIDTH/2 - 100,CAMERA_HEIGHT/2-100, getVertexBufferObjectManager(), scene, mPhysicsWorld, face);
+
 		
 		/* The actual collision-checking. */
 		scene.registerUpdateHandler(new IUpdateHandler() {
@@ -272,6 +308,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 				}
 				
 				if(face.collidesWith(left)){
+						face.setPosition(CAMERA_WIDTH-20,CAMERA_HEIGHT/2 + 20);
 						mSecondExecTime = System.currentTimeMillis();
 						if((mSecondExecTime - mFirstExecTime) > 1000){
 						//if(stageEndReached == false){
@@ -287,8 +324,9 @@ public class MainActivity extends SimpleBaseGameActivity {
 					//}
 				}
 				if(!mCamera.isRectangularShapeVisible(face)) {
+					face.setPosition(CAMERA_WIDTH-20,CAMERA_HEIGHT/2 + 20);
 					redRectangle.setColor(1, 0, 1);
-					face.setPosition(100, 100);
+					//face.setPosition(100, 100);
 					//stageEndReached = true;
 					
 				}
@@ -296,8 +334,8 @@ public class MainActivity extends SimpleBaseGameActivity {
 			//}
 		});
 
-		text = new TickerText(30, 60, this.mFont, "", new TickerTextOptions(HorizontalAlign.CENTER, 10), this.getVertexBufferObjectManager());
-		text.registerEntityModifier(
+		mText = new TickerText(30, 60, this.mFont, "", new TickerTextOptions(HorizontalAlign.CENTER, 10), this.getVertexBufferObjectManager());
+		mText.registerEntityModifier(
 			new SequenceEntityModifier(
 				new ParallelEntityModifier(
 					new AlphaModifier(10, 0.0f, 1.0f),
@@ -306,8 +344,8 @@ public class MainActivity extends SimpleBaseGameActivity {
 				new RotationModifier(5, 0, 360)
 			)
 		);
-		text.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-		scene.attachChild(text);
+		mText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+		scene.attachChild(mText);
 		createTimer();
 		/* add health bar */
 	      health = 100;
@@ -315,6 +353,12 @@ public class MainActivity extends SimpleBaseGameActivity {
           healthbar.setColor(0, 1.0f, 0);
           healthbar.setAlpha(0.4f);
           scene.attachChild(healthbar);
+
+          
+  		/* Create the face and add it to the scene. */
+  		final Sprite appleHouse = new Sprite(10, CAMERA_HEIGHT/2-50, this.mAppleHouseTextureRegion, this.getVertexBufferObjectManager());
+  		appleHouse.setScale(0.50f);
+  		scene.attachChild(appleHouse);
 
 		return scene;
 	}
@@ -343,12 +387,12 @@ public class MainActivity extends SimpleBaseGameActivity {
 		            startTime = (long) (startTime - (period * 1000));
 		            int seconds = (int) ((startTime / 1000) % 60);
 		            int minutes = (int) ((startTime / 1000) / 60);
-		            //text.setText(String.format("%d:%02d", minutes, seconds));                            
+		           // text.setText(String.format("%d:%02d", minutes, seconds));                            
 		        }
 		    }));
 		}
-	private void initJoints(final Scene scene) {
-		// revolute engine
+	private void initJoints(final Scene scene, final Sprite face) {
+			// revolute engine
 		//
 		// Create green rectangle
 		final Rectangle greenRectangle = new Rectangle(CAMERA_WIDTH/2, 10, 40, 40, getVertexBufferObjectManager());
@@ -375,7 +419,7 @@ public class MainActivity extends SimpleBaseGameActivity {
  		revoluteJointDef.maxMotorTorque = 100;
 		mPhysicsWorld.createJoint(revoluteJointDef);
 		
-		RotatingBody.createRotatingBody(CAMERA_WIDTH/2 - 100,50, getVertexBufferObjectManager(), scene, mPhysicsWorld);
+		RotatingBody.createRotatingBody(CAMERA_WIDTH/2 - 100,50, getVertexBufferObjectManager(), scene, mPhysicsWorld, face);
 
 //		RotatingBody.createRotatingBody(CAMERA_WIDTH/4 - 50 ,100, getVertexBufferObjectManager(), scene, mPhysicsWorld);
 
