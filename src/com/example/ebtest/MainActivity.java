@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Random;
 
+import org.andengine.audio.music.MusicFactory;
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.camera.hud.controls.AnalogOnScreenControl;
 import org.andengine.engine.camera.hud.controls.AnalogOnScreenControl.IAnalogOnScreenControlListener;
@@ -155,6 +156,9 @@ public class MainActivity extends SimpleBaseGameActivity {
 	// ===========================================================
 	// Getter & Setter
 	// ===========================================================
+	private long mRandomSeed = 1234567890;
+	private ITextureRegion mPausedTextureRegion;
+	private ITextureRegion mNotesTextureRegion;
 
 	// ===========================================================
 	// Methods for/from SuperClass/Interfaces
@@ -233,6 +237,16 @@ public class MainActivity extends SimpleBaseGameActivity {
 		this.mParticleSystemBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 32, 32, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
 		this.mParticleTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mParticleSystemBitmapTextureAtlas, this, "particle_point.png", 0, 0);
 
+		/* Create Puase Scene resources */
+		this.mPausedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mBitmapTextureAtlas, this, "paused.png");
+		
+		/* Create and load sound */
+
+		this.mNotesTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mBitmapTextureAtlas, this, "notes.png");
+		//this.mBitmapTextureAtlas.load();
+
+		MusicFactory.setAssetBasePath("mfx/");
+		
 		this.mBitmapTextureAtlas.load();
 
 	}
@@ -292,18 +306,18 @@ public class MainActivity extends SimpleBaseGameActivity {
 			@Override
 			public void onControlClick(final AnalogOnScreenControl pAnalogOnScreenControl) {
 				face.stopAnimation();
-				face.registerEntityModifier(new SequenceEntityModifier(new ScaleModifier(0.25f, 1, 1.5f), new ScaleModifier(0.25f, 1.5f, 1)));
+				//face.registerEntityModifier(new SequenceEntityModifier(new ScaleModifier(0.25f, 1, 1.5f), new ScaleModifier(0.25f, 1.5f, 1)));
 			}
 			
 			
 		});
 		analogOnScreenControl.getControlBase().setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-		analogOnScreenControl.getControlBase().setAlpha(0.25f);
+		analogOnScreenControl.getControlBase().setAlpha(0.50f);
 		analogOnScreenControl.getControlBase().setScaleCenter(0, 128);
 		//analogOnScreenControl.getControlBase().setScale(1.25f);
 		analogOnScreenControl.getControlBase().setScale(0.75f);
 		analogOnScreenControl.getControlKnob().setScale(0.75f);
-		analogOnScreenControl.getControlKnob().setAlpha(0.25f);
+		analogOnScreenControl.getControlKnob().setAlpha(0.50f);
 		analogOnScreenControl.refreshControlKnobPosition();
 
 		scene.setChildScene(analogOnScreenControl);
@@ -378,7 +392,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 //		);
 		mText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 		
-		scene.attachChild(mText);
+		//scene.attachChild(mText);
 		createTimer();
 		/* add health bar */
 	      health = 100;
@@ -447,21 +461,30 @@ public class MainActivity extends SimpleBaseGameActivity {
 		            startTime = (long) (startTime - (period * 1000));
 		            int seconds = (int) ((startTime / 1000) % 60);
 		            int minutes = (int) ((startTime / 1000) / 60);
-		           mText.setText(String.format("%d:%02d", minutes, seconds));                            
+		          // mText.setText(String.format("%d:%02d", minutes, seconds));                            
 		        }
 		    }));
 		}
 	private void initJoints(final Scene scene, final Sprite face) {
 			// revolute engine
 		//
+
+  		final Random random = new Random(mRandomSeed);
+  	//	for(int appleIdx = 0; appleIdx < appleCount; appleIdx++){  	
+  			
+	//  		final AnimatedSprite apples = new AnimatedSprite(random.nextFloat() * (CAMERA_WIDTH - 32), random.nextFloat() * (CAMERA_HEIGHT - 32), pApplesTextureRegion, mVbo);
+	
 		// Create green rectangle
 		for(int i = 0; i < 5; i++){
-			final Rectangle greenRectangle = new Rectangle(CAMERA_WIDTH/4 + i*40, 10 + i*30, 1, 1, getVertexBufferObjectManager());
+			float randFloat = random.nextFloat();
+			float randFloatX = random.nextFloat();
+			float randFloatY = random.nextFloat();
+			final Rectangle greenRectangle = new Rectangle(randFloatX*CAMERA_WIDTH/4 + i*100, randFloatY + i*50 , 1, 1, getVertexBufferObjectManager());
 			greenRectangle.setColor(Color.TRANSPARENT);
 			scene.attachChild(greenRectangle);
 	
 			// Create red rectangle
-			redRectangle = new Rectangle(CAMERA_WIDTH/4 + i*40, 10 + i*30, 40, 1, getVertexBufferObjectManager());
+			redRectangle = new Rectangle(randFloatX*CAMERA_WIDTH/4 + i*100,  randFloatY + i*50, 1, 40, getVertexBufferObjectManager());
 			redRectangle.setColor(Color.RED);
 			scene.attachChild(redRectangle);
 	
@@ -476,10 +499,34 @@ public class MainActivity extends SimpleBaseGameActivity {
 			final RevoluteJointDef revoluteJointDef = new RevoluteJointDef();
 			revoluteJointDef.initialize(greenBody, redBody, greenBody.getWorldCenter());
 			revoluteJointDef.enableMotor = true;
-			revoluteJointDef.motorSpeed = -1;  // fjrom -1
-	 		revoluteJointDef.maxMotorTorque = 10;
+			revoluteJointDef.motorSpeed = -1f;
+	 		revoluteJointDef.maxMotorTorque = 100;
 	 		
 			mPhysicsWorld.createJoint(revoluteJointDef);
+			
+
+			scene.registerUpdateHandler(new IUpdateHandler() {
+
+				@Override
+				public void reset() { }
+
+				@Override
+				public void onUpdate(final float pSecondsElapsed) {
+					if(redRectangle.collidesWith(face)) {
+							redRectangle.setColor(1, 0, 0);
+							/* Game OVER !! */
+							//PauseScene ps = new PauseScene(scene,mCamera,mPausedTextureRegion,getVertexBufferObjectManager());
+							//scene.setChildScene(ps.getPauseScene(), false, true, true);
+							//getEngine().stop();
+
+					} else {
+						redRectangle.setColor(1, 0, 1);
+					}
+					
+				}
+				
+			});
+
 			
 	//		RotatingBody.createRotatingBody(CAMERA_WIDTH/2 - 200,500, getVertexBufferObjectManager(), scene, mPhysicsWorld, face);
 	
