@@ -4,8 +4,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.andengine.engine.handler.IUpdateHandler;
 import org.andengine.entity.primitive.Rectangle;
 import org.andengine.entity.scene.Scene;
+import org.andengine.entity.sprite.Sprite;
 import org.andengine.extension.physics.box2d.PhysicsConnector;
 import org.andengine.extension.physics.box2d.PhysicsFactory;
 import org.andengine.extension.physics.box2d.PhysicsWorld;
@@ -17,12 +19,13 @@ import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
 public class RotatingBody {
-public static Map<Rectangle,Rectangle> createRotatingBody(int width, int height, VertexBufferObjectManager vbo, final Scene scene, final PhysicsWorld physicsWorld)
+public static Map<Rectangle,Rectangle> createRotatingBody(int width, int height, VertexBufferObjectManager vbo, final Scene scene, final PhysicsWorld physicsWorld, final Sprite face)
 {
 	// Create green rectangle
-	final Rectangle greenRectangle = new Rectangle(width/2, height, 40, 40, vbo);
+	final Rectangle greenRectangle = new Rectangle(width/2, height, 1, 1, vbo);
 	greenRectangle.setColor(Color.TRANSPARENT);
 	scene.attachChild(greenRectangle);
+	//face.setScale(0.20f);
 
 	// Create red rectangle
 	final Rectangle redRectangle = new Rectangle(width/2, height, 80, 5, vbo);
@@ -43,10 +46,30 @@ public static Map<Rectangle,Rectangle> createRotatingBody(int width, int height,
 	revoluteJointDef.motorSpeed = 2;  // fjrom -1
 		revoluteJointDef.maxMotorTorque = 100;
 	physicsWorld.createJoint(revoluteJointDef);
-	scene.registerUpdateHandler(physicsWorld);
+	//scene.registerUpdateHandler(physicsWorld);
 	HashMap<Rectangle,Rectangle> hMap = new HashMap<Rectangle,Rectangle>();
 	hMap.put(greenRectangle, redRectangle);
+	
+	scene.registerUpdateHandler(new IUpdateHandler() {
+
+		@Override
+		public void reset() { }
+
+		@Override
+		public void onUpdate(final float pSecondsElapsed) {
+			if(redRectangle.collidesWith(face)) {
+					redRectangle.setColor(1, 0, 0);
+			} else {
+				redRectangle.setColor(0, 0, 0);
+			}
+			
+		}
+		
+	});
+
+	scene.registerUpdateHandler(physicsWorld);
 	return hMap;
 	//return scene;
 }
+
 }

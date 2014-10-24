@@ -3,6 +3,8 @@ package com.example.ebtest;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.Random;
 
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.camera.hud.controls.AnalogOnScreenControl;
@@ -21,8 +23,20 @@ import org.andengine.entity.modifier.ParallelEntityModifier;
 import org.andengine.entity.modifier.RotationModifier;
 import org.andengine.entity.modifier.ScaleModifier;
 import org.andengine.entity.modifier.SequenceEntityModifier;
+import org.andengine.entity.particle.SpriteParticleSystem;
+import org.andengine.entity.particle.emitter.CircleOutlineParticleEmitter;
+import org.andengine.entity.particle.initializer.AlphaParticleInitializer;
+import org.andengine.entity.particle.initializer.BlendFunctionParticleInitializer;
+import org.andengine.entity.particle.initializer.ColorParticleInitializer;
+import org.andengine.entity.particle.initializer.RotationParticleInitializer;
+import org.andengine.entity.particle.initializer.VelocityParticleInitializer;
+import org.andengine.entity.particle.modifier.AlphaParticleModifier;
+import org.andengine.entity.particle.modifier.ColorParticleModifier;
+import org.andengine.entity.particle.modifier.ExpireParticleInitializer;
+import org.andengine.entity.particle.modifier.ScaleParticleModifier;
 import org.andengine.entity.primitive.Line;
 import org.andengine.entity.primitive.Rectangle;
+import org.andengine.entity.scene.IOnSceneTouchListener;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.scene.background.SpriteBackground;
@@ -33,10 +47,12 @@ import org.andengine.entity.text.TextOptions;
 import org.andengine.entity.text.TickerText;
 import org.andengine.entity.text.TickerText.TickerTextOptions;
 import org.andengine.entity.util.FPSLogger;
+//import org.andengine.examples.ParticleSystemSimpleExample;
 import org.andengine.extension.physics.box2d.PhysicsConnector;
 import org.andengine.extension.physics.box2d.PhysicsFactory;
 import org.andengine.extension.physics.box2d.PhysicsWorld;
 import org.andengine.extension.physics.box2d.util.constants.PhysicsConstants;
+import org.andengine.input.touch.TouchEvent;
 import org.andengine.opengl.font.Font;
 import org.andengine.opengl.font.FontFactory;
 import org.andengine.opengl.shader.ShaderProgram;
@@ -63,6 +79,7 @@ import org.andengine.util.debug.Debug;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
+import com.badlogic.gdx.physics.box2d.MassData;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
@@ -83,18 +100,19 @@ public class MainActivity extends SimpleBaseGameActivity {
 	// Constantsfa
 	// ===========================================================
 
-	private static final int CAMERA_WIDTH = 480;
-	private static final int CAMERA_HEIGHT = 320;
-
+	private static  int CAMERA_WIDTH = 480;
+	private static int CAMERA_HEIGHT = 320;
+	private static long RANDOM_SEED = 1234567890; 
+	private int mApplesCount = 10;
 	// ===========================================================
 	// Fields
 	// ===========================================================
 
 	private Camera mCamera;
-
+	private AnimatedSprite face;
 	//private BitmapTextureAtlas mBitmapTextureAtlas;
 	private BuildableBitmapTextureAtlas mBitmapTextureAtlas;
-	private ITiledTextureRegion mFaceTextureRegion;
+	private ITiledTextureRegion mFaceTextureRegion, mApplesTextureRegion;
 
 	private BitmapTextureAtlas mOnScreenControlTexture;
 	private BuildableBitmapTextureAtlas mHomeTextureAtlas;
@@ -127,9 +145,13 @@ public class MainActivity extends SimpleBaseGameActivity {
 	// Constructors
 	// ===========================================================
 		private TickerText mText;
-	private ITexture mAppleHouseTexture;
-	private ITextureRegion mAppleHouseTextureRegion;
-
+	private ITexture mAppleHouseTexture, mApplesTexture;
+	private ITextureRegion mAppleHouseTextureRegion; //, mApplesTextureRegion;
+	//private int mApplesCount = 5;
+	public Sprite mAppleHouse;
+	private ITextureRegion mParticleTextureRegion;
+	private BitmapTextureAtlas mParticleSystemBitmapTextureAtlas;
+	private AppleManager am;
 	// ===========================================================
 	// Getter & Setter
 	// ===========================================================
@@ -177,7 +199,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		this.mOnScreenControlKnobTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_knob.png", 128, 0);
 		this.mOnScreenControlTexture.load();
 		this.mybackgroundTextureAtlas.load();
-		
+		/* Create Apple House Texture */
 		try {
 			this.mAppleHouseTexture = new BitmapTexture(this.getTextureManager(), new IInputStreamOpener() {
 				@Override
@@ -192,7 +214,27 @@ public class MainActivity extends SimpleBaseGameActivity {
 			Debug.e(e);
 		}
 
+		/* Create Apple Texture */
+		try {
+			this.mApplesTexture = new BitmapTexture(this.getTextureManager(), new IInputStreamOpener() {
+				@Override
+				public InputStream open() throws IOException {
+					return getAssets().open("gfx/apples.png");
+				}
+			});
+
+			this.mApplesTexture.load();
+			this.mApplesTextureRegion = TextureRegionFactory.extractTiledFromTexture(this.mApplesTexture,4,1);
+		} catch (IOException e) {
+			Debug.e(e);
+		}
 		
+		/* Create particle system */
+		this.mParticleSystemBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 32, 32, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
+		this.mParticleTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mParticleSystemBitmapTextureAtlas, this, "particle_point.png", 0, 0);
+
+		this.mBitmapTextureAtlas.load();
+
 	}
 
 	private SpriteBackground getSpriteBackground(String imageName)
@@ -207,6 +249,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 	}
 	@Override
 	public Scene onCreateScene() {
+		RANDOM_SEED = System.nanoTime();
 		this.mEngine.registerUpdateHandler(new FPSLogger());
 
 		final Scene scene = new Scene();
@@ -221,35 +264,14 @@ public class MainActivity extends SimpleBaseGameActivity {
 		
 		this.mPhysicsWorld = new PhysicsWorld(new Vector2(0, SensorManager.GRAVITY_EARTH), false);
 
-		// set walls invisible
-		final Rectangle ground = new Rectangle(0, CAMERA_HEIGHT - 2, CAMERA_WIDTH, 2, getVertexBufferObjectManager());
-		//final Rectangle roof = new Rectangle(0, 0, CAMERA_WIDTH, 2, getVertexBufferObjectManager());
-		final Rectangle left = new Rectangle(0, 0, 2, CAMERA_HEIGHT, getVertexBufferObjectManager());
-		final Rectangle right = new Rectangle(CAMERA_WIDTH - 2, 0, 2, CAMERA_HEIGHT, getVertexBufferObjectManager());
-
-		final FixtureDef wallFixtureDef = PhysicsFactory.createFixtureDef(0, 0.5f, 0.5f);
-		PhysicsFactory.createBoxBody(this.mPhysicsWorld, ground, BodyType.StaticBody, wallFixtureDef);
-		//PhysicsFactory.createBoxBody(this.mPhysicsWorld, roof, BodyType.StaticBody, wallFixtureDef);
-		PhysicsFactory.createBoxBody(this.mPhysicsWorld, left, BodyType.StaticBody, wallFixtureDef);
-		PhysicsFactory.createBoxBody(this.mPhysicsWorld, right, BodyType.StaticBody, wallFixtureDef);
-
-		scene.attachChild(ground);
-		//scene.attachChild(roof);
-		scene.attachChild(left);
-		scene.attachChild(right);
-
-		scene.registerUpdateHandler(this.mPhysicsWorld);
-
-		// end walls invisible
+			scene.registerUpdateHandler(this.mPhysicsWorld);
 		
-		
-		final float centerX = (CAMERA_WIDTH - this.mFaceTextureRegion.getWidth()) / 2;
-		final float centerY = (CAMERA_HEIGHT - this.mFaceTextureRegion.getHeight()) / 2;
-
-		final AnimatedSprite face = new AnimatedSprite(centerX, centerY, this.mFaceTextureRegion, this.getVertexBufferObjectManager());
+		float centerX = (CAMERA_WIDTH - this.mFaceTextureRegion.getWidth()) / 2;
+		 float centerY = (CAMERA_HEIGHT - this.mFaceTextureRegion.getHeight()) / 2;
+		 face = new AnimatedSprite(centerX, centerY, this.mFaceTextureRegion, this.getVertexBufferObjectManager());
 		//face.setSize(0.75f, 0.75f);
-		face.setScale(0.80f);
-		face.animate(5);
+		face.setScale(0.50f);
+		face.animate(3);
 		final PhysicsHandler physicsHandler = new PhysicsHandler(face);
 		face.registerUpdateHandler(physicsHandler);
 		face.stopAnimation();
@@ -261,7 +283,10 @@ public class MainActivity extends SimpleBaseGameActivity {
 			@Override
 			public void onControlChange(final BaseOnScreenControl pBaseOnScreenControl, final float pValueX, final float pValueY) {
 				physicsHandler.setVelocity(pValueX * 100, pValueY * 100);
-				face.animate(5);
+				if((pValueX*100 != 0) || (pValueY*100 != 0))
+					face.animate(3);
+				else
+					face.stopAnimation();
 			}
 
 			@Override
@@ -307,22 +332,29 @@ public class MainActivity extends SimpleBaseGameActivity {
 					redRectangle.setColor(0, 0, 0);
 				}
 				
-				if(face.collidesWith(left)){
+				if((face.collidesWith(mAppleHouse)) && (am.getGoodAppleSet().size() < 1)){
 						face.setPosition(CAMERA_WIDTH-20,CAMERA_HEIGHT/2 + 20);
-						mSecondExecTime = System.currentTimeMillis();
+						mSecondExecTime = System.nanoTime();
 						if((mSecondExecTime - mFirstExecTime) > 1000){
-						//if(stageEndReached == false){
-						//	stageEndReached = true;
 							stageCount++;
 							health = 100;
 							updatehealth(health);
 							stageCount = stageCount % (backgroundNames.length);
 							scene.setBackground(getSpriteBackground(backgroundNames[stageCount]));
 							mFirstExecTime = System.currentTimeMillis();
+							
+							/* Add new set of images to the scene*/
+							am = new AppleManager(scene,getEngine().getCamera(),getEngine().getVertexBufferObjectManager());
+					  		List<AnimatedSprite> appleList = am.generateApplesWithCollissionSprite(mApplesCount, mApplesTextureRegion, face);
+					  		for(int appleCount = 0; appleCount < appleList.size(); appleCount++)
+					  			scene.attachChild(appleList.get(appleCount));
+					  
 						}
 						//setBackground(scene,backgroundNames[stageCount]);
 					//}
 				}
+				
+				
 				if(!mCamera.isRectangularShapeVisible(face)) {
 					face.setPosition(CAMERA_WIDTH-20,CAMERA_HEIGHT/2 + 20);
 					redRectangle.setColor(1, 0, 1);
@@ -334,17 +366,18 @@ public class MainActivity extends SimpleBaseGameActivity {
 			//}
 		});
 
-		mText = new TickerText(30, 60, this.mFont, "", new TickerTextOptions(HorizontalAlign.CENTER, 10), this.getVertexBufferObjectManager());
-		mText.registerEntityModifier(
-			new SequenceEntityModifier(
-				new ParallelEntityModifier(
-					new AlphaModifier(10, 0.0f, 1.0f),
-					new ScaleModifier(10, 0.5f, 1.0f)
-				),
-				new RotationModifier(5, 0, 360)
-			)
-		);
+		mText = new TickerText(30, 60, this.mFont, "     ", new TickerTextOptions(HorizontalAlign.CENTER, 10), this.getVertexBufferObjectManager());
+//		mText.registerEntityModifier(
+//			new SequenceEntityModifier(
+//				new ParallelEntityModifier(
+//					new AlphaModifier(10, 0.0f, 1.0f),
+//					new ScaleModifier(10, 0.5f, 1.0f)
+//				),
+//				new RotationModifier(5, 0, 360)
+//			)
+//		);
 		mText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+		
 		scene.attachChild(mText);
 		createTimer();
 		/* add health bar */
@@ -355,11 +388,38 @@ public class MainActivity extends SimpleBaseGameActivity {
           scene.attachChild(healthbar);
 
           
-  		/* Create the face and add it to the scene. */
-  		final Sprite appleHouse = new Sprite(10, CAMERA_HEIGHT/2-50, this.mAppleHouseTextureRegion, this.getVertexBufferObjectManager());
-  		appleHouse.setScale(0.50f);
-  		scene.attachChild(appleHouse);
+  		mAppleHouse = new Sprite(10, CAMERA_HEIGHT/2-50, this.mAppleHouseTextureRegion, this.getVertexBufferObjectManager());
+  		mAppleHouse.setScale(0.50f);
+  		mAppleHouse.setAlpha(0f);
+  		mAppleHouse.registerUpdateHandler(new IUpdateHandler(){
 
+			@Override
+			public void onUpdate(float pSecondsElapsed) {
+				// TODO Auto-generated method stub
+				// bad apples divided by total apples will give between 0 (transparent) and 1 (opaque)
+				float alphaValue = (float)am.getBadAppleSet().size()/(float)(am.getGoodAppleSet().size() + am.getBadAppleSet().size());
+					mAppleHouse.setAlpha(alphaValue);
+			}
+
+			@Override
+			public void reset() {
+				// TODO Auto-generated method stub
+				
+			}
+  			
+  		});
+  		scene.attachChild(mAppleHouse);
+  		//scene.getChildByTag(pTag)
+
+
+		//RotatingBodyManager rbm = new RotatingBodyManager(scene,getEngine().getCamera(),this.mPhysicsWorld);
+		
+
+  		am = new AppleManager(scene,getEngine().getCamera(),this.getVertexBufferObjectManager());
+  		List<AnimatedSprite> appleList = am.generateApplesWithCollissionSprite(mApplesCount, mApplesTextureRegion, face);
+  		for(int appleCount = 0; appleCount < appleList.size(); appleCount++)
+  			scene.attachChild(appleList.get(appleCount));
+  		
 		return scene;
 	}
 
@@ -387,7 +447,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		            startTime = (long) (startTime - (period * 1000));
 		            int seconds = (int) ((startTime / 1000) % 60);
 		            int minutes = (int) ((startTime / 1000) / 60);
-		           // text.setText(String.format("%d:%02d", minutes, seconds));                            
+		           mText.setText(String.format("%d:%02d", minutes, seconds));                            
 		        }
 		    }));
 		}
@@ -395,38 +455,42 @@ public class MainActivity extends SimpleBaseGameActivity {
 			// revolute engine
 		//
 		// Create green rectangle
-		final Rectangle greenRectangle = new Rectangle(CAMERA_WIDTH/2, 10, 40, 40, getVertexBufferObjectManager());
-		greenRectangle.setColor(Color.TRANSPARENT);
-		scene.attachChild(greenRectangle);
-
-		// Create red rectangle
-		redRectangle = new Rectangle(CAMERA_WIDTH/2, 10, 80, 5, getVertexBufferObjectManager());
-		redRectangle.setColor(Color.RED);
-		scene.attachChild(redRectangle);
-
-		// Create body for green rectangle (Static)
-		final Body greenBody = PhysicsFactory.createBoxBody(mPhysicsWorld, greenRectangle, BodyType.StaticBody, PhysicsFactory.createFixtureDef(0, 0, 0));
-
-		// Create body for red rectangle (Dynamic, for our arm)
-		final Body redBody = PhysicsFactory.createBoxBody(mPhysicsWorld, redRectangle, BodyType.DynamicBody, PhysicsFactory.createFixtureDef(5, 0.5f, 0.5f));
-		mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(redRectangle, redBody, true, true));
-
-		// Create revolute joint, connecting those two bodies 
-		final RevoluteJointDef revoluteJointDef = new RevoluteJointDef();
-		revoluteJointDef.initialize(greenBody, redBody, greenBody.getWorldCenter());
-		revoluteJointDef.enableMotor = true;
-		revoluteJointDef.motorSpeed = 2;  // fjrom -1
- 		revoluteJointDef.maxMotorTorque = 100;
-		mPhysicsWorld.createJoint(revoluteJointDef);
-		
-		RotatingBody.createRotatingBody(CAMERA_WIDTH/2 - 100,50, getVertexBufferObjectManager(), scene, mPhysicsWorld, face);
-
-//		RotatingBody.createRotatingBody(CAMERA_WIDTH/4 - 50 ,100, getVertexBufferObjectManager(), scene, mPhysicsWorld);
-
-		scene.registerUpdateHandler(mPhysicsWorld);
+		for(int i = 0; i < 5; i++){
+			final Rectangle greenRectangle = new Rectangle(CAMERA_WIDTH/4 + i*40, 10 + i*30, 1, 1, getVertexBufferObjectManager());
+			greenRectangle.setColor(Color.TRANSPARENT);
+			scene.attachChild(greenRectangle);
+	
+			// Create red rectangle
+			redRectangle = new Rectangle(CAMERA_WIDTH/4 + i*40, 10 + i*30, 40, 1, getVertexBufferObjectManager());
+			redRectangle.setColor(Color.RED);
+			scene.attachChild(redRectangle);
+	
+			// Create body for green rectangle (Static)
+			final Body greenBody = PhysicsFactory.createBoxBody(mPhysicsWorld, greenRectangle, BodyType.StaticBody, PhysicsFactory.createFixtureDef(0, 0, 0));
+	
+			// Create body for red rectangle (Dynamic, for our arm)
+			final Body redBody = PhysicsFactory.createBoxBody(mPhysicsWorld, redRectangle, BodyType.DynamicBody, PhysicsFactory.createFixtureDef(5, 0.5f, 0.5f));
+			mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(redRectangle, redBody, true, true));
+			
+			// Create revolute joint, connecting those two bodies 
+			final RevoluteJointDef revoluteJointDef = new RevoluteJointDef();
+			revoluteJointDef.initialize(greenBody, redBody, greenBody.getWorldCenter());
+			revoluteJointDef.enableMotor = true;
+			revoluteJointDef.motorSpeed = -1;  // fjrom -1
+	 		revoluteJointDef.maxMotorTorque = 10;
+	 		
+			mPhysicsWorld.createJoint(revoluteJointDef);
+			
+	//		RotatingBody.createRotatingBody(CAMERA_WIDTH/2 - 200,500, getVertexBufferObjectManager(), scene, mPhysicsWorld, face);
+	
+	//		RotatingBody.createRotatingBody(CAMERA_WIDTH/4 - 50 ,100, getVertexBufferObjectManager(), scene, mPhysicsWorld);
+	
+			scene.registerUpdateHandler(mPhysicsWorld);
+		}
 		
 
 	}
+	
 	// ===========================================================
 	// Inner and Anonymous Classes
 	// ===========================================================
