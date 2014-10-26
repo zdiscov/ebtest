@@ -10,7 +10,6 @@ import org.andengine.engine.camera.Camera;
 import org.andengine.engine.handler.IUpdateHandler;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.sprite.AnimatedSprite;
-import org.andengine.entity.sprite.Sprite;
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 
@@ -26,6 +25,7 @@ public class AppleManager {
 	List<AnimatedSprite> appleList;
 	Camera mCamera;
 	Set<AnimatedSprite> goodAppleSet, badAppleSet;
+	Score mScore;
 	public Set<AnimatedSprite> getGoodAppleSet() {
 		return goodAppleSet;
 	}
@@ -44,6 +44,9 @@ public class AppleManager {
 		mCamera = camera;
 		goodAppleSet = new HashSet<AnimatedSprite>();
 		badAppleSet = new HashSet<AnimatedSprite>();
+		mScore = Score.getScoreSingletonInstance();
+		
+		
 	}
 	
 	public List<AnimatedSprite> generateApplesWithCollissionSprite(int appleCount, ITiledTextureRegion pApplesTextureRegion, final AnimatedSprite face)
@@ -67,14 +70,20 @@ public class AppleManager {
 				public void onUpdate(float pSecondsElapsed) {
 					// TODO Auto-generated method stub
 					if(apples.collidesWith(face)){
+						if(apples.isVisible()){
+							mScore.updateScore(1);
+						}
+//						try{
+//							MainActivity.mScoreText.setText(String.format("Apples - %d", mScore.getScoreCount()));                            
+//						}catch(Exception ex){
+//							Debug.e(ex.toString());
+//						}
 						goodAppleSet.remove(apples);
 						badAppleSet.add(apples);
 						apples.setScale(3f);
 						apples.setVisible(false);
+						//apples.detachSelf();
 					}
-//					else if(face.collidesWith(apples)){
-//						apples.setVisible(false);
-//					}
 				}
 
 				@Override
