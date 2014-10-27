@@ -8,8 +8,11 @@ import java.util.Set;
 
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.handler.IUpdateHandler;
+import org.andengine.entity.IEntity;
+import org.andengine.entity.modifier.IEntityModifier;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.sprite.AnimatedSprite;
+import org.andengine.opengl.texture.region.ITextureRegion;
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 
@@ -26,6 +29,8 @@ public class AppleManager {
 	Camera mCamera;
 	Set<AnimatedSprite> goodAppleSet, badAppleSet;
 	Score mScore;
+	private MainActivity mMainActivity;
+	//MainActivity mMainActivity;
 	public Set<AnimatedSprite> getGoodAppleSet() {
 		return goodAppleSet;
 	}
@@ -34,7 +39,9 @@ public class AppleManager {
 		return badAppleSet;
 	}
 
-	public AppleManager(final Scene scene,  final Camera camera, final VertexBufferObjectManager vbo){
+	public AppleManager(final Scene scene,  final Camera camera, final MainActivity mainActivity, final VertexBufferObjectManager vbo){
+			//, final MainActivity mainActivity){
+		mMainActivity = mainActivity;
 		mScene = scene;
 		mRandomSeed = System.nanoTime();
 		CAMERA_HEIGHT = (int)camera.getHeight();
@@ -49,7 +56,7 @@ public class AppleManager {
 		
 	}
 	
-	public List<AnimatedSprite> generateApplesWithCollissionSprite(int appleCount, ITiledTextureRegion pApplesTextureRegion, final AnimatedSprite face)
+	public List<AnimatedSprite> generateApplesWithCollissionSprite(int appleCount, ITiledTextureRegion pApplesTextureRegion, final AnimatedSprite face, final ITextureRegion particleTextureRegion)
 	{
   		final Random random = new Random(mRandomSeed);
   		for(int appleIdx = 0; appleIdx < appleCount; appleIdx++){  	
@@ -72,6 +79,13 @@ public class AppleManager {
 					if(apples.collidesWith(face)){
 						if(apples.isVisible()){
 							mScore.updateScore(1);
+							/* Adding fancy shmancy when an apple gets eaten by the worm */
+							
+							FireWorks fworks = new FireWorks();
+							//fworks.startFireworksExplosion(apples.getX(), apples.getY(), iParticleCount, dInitVel, dSpreading, iDecelerationPercent, startRed, endRed, startGreen, endGreen, startBlue, endBlue, engine, particleTextureRegion, vertexBufferObjectManager);
+							//fworks.bubbleBurst(explosionSound, rand, afterBurstBackground, scene, text);
+							fworks.startFireworksExplosion(apples.getX(),apples.getY(),20,4,0.5f,90, 1.0f, 1.0f, 1.0f,0f,0f,0f,mMainActivity.getEngine(),particleTextureRegion,mMainActivity.getVertexBufferObjectManager());						
+
 						}
 //						try{
 //							MainActivity.mScoreText.setText(String.format("Apples - %d", mScore.getScoreCount()));                            

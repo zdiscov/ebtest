@@ -18,14 +18,14 @@ public class Sounds {
 private MainActivity mActivity;
 private Music mMusic;
 //private ITextureRegion mSoundNotesTextureRegion;
-	public  Sounds(MainActivity mainActivity,  Scene scene)
+	public  Sounds(MainActivity mainActivity,  Scene scene, String musicName, boolean setLooping)
 	{
 		mActivity = mainActivity;
 		//mScene = scene;
 		try {
-			this.mMusic = MusicFactory.createMusicFromAsset(mActivity.getEngine().getMusicManager(), mActivity.getApplicationContext(), "smb_over.mid");
+			this.mMusic = MusicFactory.createMusicFromAsset(mActivity.getEngine().getMusicManager(), mActivity.getApplicationContext(), musicName);
 			//mMusic.play();
-			this.mMusic.setLooping(true);
+			this.mMusic.setLooping(setLooping);
 		} catch (final IOException e) {
 			Debug.e(e);
 		}
@@ -41,9 +41,12 @@ private Music mMusic;
 			@Override
 			public boolean onAreaTouched(final TouchEvent pSceneTouchEvent, final ITouchArea pTouchArea, final float pTouchAreaLocalX, final float pTouchAreaLocalY) {
 				if(pSceneTouchEvent.isActionDown()) {
+					
 					if(mMusic.isPlaying()) {
+						notes.setScale(1.3f);
 						mMusic.pause();
 					} else {
+						notes.setScale(1f);
 						mMusic.play();
 					}
 				}

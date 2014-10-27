@@ -20,6 +20,7 @@ import android.widget.Toast;
 
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
+import com.badlogic.gdx.physics.box2d.MassData;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
 public class RotatingBodyManager {
@@ -36,9 +37,9 @@ public class RotatingBodyManager {
 		mCamera = camera;
 	}
 	
-	public void initJoints(final Scene scene, final Sprite face, long randomSeed, final MainActivity activity, int rotBodyCount) {
+	public void initJoints(final Scene scene, final Sprite face, long randomSeed, final MainActivity activity, int rotBodyCount, int rotBodyLength) {
 		final Random random = new Random(randomSeed);
-		for(int i = 0; i < rotBodyCount; i++){
+		for(int i = 1; i <= rotBodyCount; i++){
 		float randFloat = random.nextFloat();
 		float randFloatX = random.nextFloat();
 		float randFloatY = random.nextFloat();
@@ -47,7 +48,7 @@ public class RotatingBodyManager {
 		scene.attachChild(mGreenRectangle);
 
 		// Create red rectangle
-		final Rectangle mRedRectangle = new Rectangle(randFloatX*mCamera.getWidth()/4 + i*100,  randFloatY + i*50, 1, 40, activity.getVertexBufferObjectManager());
+		final Rectangle mRedRectangle = new Rectangle(randFloatX*mCamera.getWidth()/4 + i*100,  randFloatY + i*50, 1, rotBodyLength, activity.getVertexBufferObjectManager());
 		mRedRectangle.setColor(Color.RED);
 		scene.attachChild(mRedRectangle);
 
@@ -56,13 +57,16 @@ public class RotatingBodyManager {
 
 		// Create body for red rectangle (Dynamic, for our arm)
 		Body mRedBody = PhysicsFactory.createBoxBody(mPhysicsWorld, mRedRectangle, BodyType.DynamicBody, PhysicsFactory.createFixtureDef(5, 0.5f, 0.5f));
+//		MassData massData = new MassData();
+//		massData.mass = 1;
+//		mRedBody.setMassData(massData);
 		mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(mRedRectangle, mRedBody, true, true));
 		
 		// Create revolute joint, connecting those two bodies 
 		final RevoluteJointDef revoluteJointDef = new RevoluteJointDef();
 		revoluteJointDef.initialize(mGreenBody, mRedBody, mGreenBody.getWorldCenter());
 		revoluteJointDef.enableMotor = true;
-		revoluteJointDef.motorSpeed = -1f;
+		revoluteJointDef.motorSpeed = (i%2 == 0 ? (-0.5f*i*0.5f): (0.5f*i*0.5f));
  		revoluteJointDef.maxMotorTorque = 100;
  		
 		mPhysicsWorld.createJoint(revoluteJointDef);

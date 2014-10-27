@@ -156,7 +156,11 @@ public class MainActivity extends SimpleBaseGameActivity {
 	ITextureRegion mPauseTextureRegion;
 	//private int mApplesCount = 5;
 	public Sprite mAppleHouse;
-	private ITextureRegion mParticleTextureRegion;
+	ITextureRegion mPointTextureRegion;
+	public ITextureRegion getmPointTextureRegion() {
+		return mPointTextureRegion;
+	}
+
 	private BitmapTextureAtlas mParticleSystemBitmapTextureAtlas;
 	private AppleManager am;
 	// ===========================================================
@@ -172,7 +176,11 @@ public class MainActivity extends SimpleBaseGameActivity {
 	// ===========================================================
 	// Methods for/from SuperClass/Interfaces
 	// ===========================================================
-
+	private MainActivity getMainActivity()
+	{
+		return this;
+	}
+	
 	@Override
 	public EngineOptions onCreateEngineOptions() {
 		Toast.makeText(this, "Also try tapping this AnalogOnScreenControl!", Toast.LENGTH_LONG).show();
@@ -248,8 +256,11 @@ public class MainActivity extends SimpleBaseGameActivity {
 		}
 		
 		/* Create particle system */
-		this.mParticleSystemBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 32, 32, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
-		this.mParticleTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mParticleSystemBitmapTextureAtlas, this, "particle_point.png", 0, 0);
+		this.mParticleSystemBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 256, 256, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
+		this.mPointTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mParticleSystemBitmapTextureAtlas, this, "bf7.png", 0, 0);
+
+//        BitmapTextureAtlas mParticleBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 512, 512, TextureOptions.BILINEAR);//
+//		this.mParticleTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mParticleBitmapTextureAtlas, this, "apples.png", 0, 0);
 
 		/* Create Puase Scene resources */
 		try {
@@ -293,7 +304,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		}
 
 		
-		
+		mParticleSystemBitmapTextureAtlas.load();
 		this.mBitmapTextureAtlas.load();
 
 	}
@@ -385,12 +396,23 @@ public class MainActivity extends SimpleBaseGameActivity {
 							health = 100;
 							updatehealth(health);
 							stageCount = stageCount % (backgroundNames.length);
-							scene.setBackground(getSpriteBackground(backgroundNames[stageCount]));
+							//scene.setBackground(getSpriteBackground(backgroundNames[stageCount]));
+							//scene.setBackground();
+							//create a Sprite object.
+							Sprite spritebackground = new Sprite(0,0,mbackgroundRegion,getVertexBufferObjectManager());
+							//create a SpriteBackground object.
+							
+							SpriteBackground background = new SpriteBackground(0,0,0,spritebackground);
+							//set the background to scene
+							scene.setBackground(background);
+
+							//scene.setBackground(new Background());
+							//scene.setBackgroundEnabled(false);
 							mFirstExecTime = System.currentTimeMillis();
 							
 							/* Add new set of images to the scene*/
-							am = new AppleManager(scene,getEngine().getCamera(),getEngine().getVertexBufferObjectManager());
-					  		List<AnimatedSprite> appleList = am.generateApplesWithCollissionSprite(mApplesCount, mApplesTextureRegion, face);
+							am = new AppleManager(scene,getEngine().getCamera(),getMainActivity(),getEngine().getVertexBufferObjectManager() );
+					  		List<AnimatedSprite> appleList = am.generateApplesWithCollissionSprite(mApplesCount, mApplesTextureRegion, face, getmPointTextureRegion());
 					  		for(int appleCount = 0; appleCount < appleList.size(); appleCount++)
 					  			scene.attachChild(appleList.get(appleCount));
 					  
@@ -402,7 +424,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 
 		mText = new TickerText(30, 20, this.mFont, "     ", new TickerTextOptions(HorizontalAlign.CENTER, 12), this.getVertexBufferObjectManager());
 
-		mScoreText = new TickerText(CAMERA_WIDTH-200, 20, this.mFont,"XXXXXXXXXX", new TickerTextOptions(HorizontalAlign.CENTER, 10), this.getVertexBufferObjectManager());
+		mScoreText = new TickerText(CAMERA_WIDTH-200, 20, this.mFont,"           ", new TickerTextOptions(HorizontalAlign.CENTER, 10), this.getVertexBufferObjectManager());
 
 		mText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 		mScoreText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
@@ -437,13 +459,14 @@ public class MainActivity extends SimpleBaseGameActivity {
   			
   		});
   		scene.attachChild(mAppleHouse);
-   		am = new AppleManager(scene,getEngine().getCamera(),this.getVertexBufferObjectManager());
-  		List<AnimatedSprite> appleList = am.generateApplesWithCollissionSprite(mApplesCount, mApplesTextureRegion, face);
+   		am = new AppleManager(scene,getEngine().getCamera(),getMainActivity(),this.getVertexBufferObjectManager());
+  		List<AnimatedSprite> appleList = am.generateApplesWithCollissionSprite(mApplesCount, mApplesTextureRegion, face, this.getmPointTextureRegion());
   		for(int appleCount = 0; appleCount < appleList.size(); appleCount++)
   			scene.attachChild(appleList.get(appleCount)); 		
-  		new Sounds(this, scene);
+  		new Sounds(this, scene,"smb_over.mid",true);
 		RotatingBodyManager rbm = new RotatingBodyManager(scene, mCamera, mPhysicsWorld);
-		rbm.initJoints(scene, face, RANDOM_SEED, this, 5);
+		rbm.initJoints(scene, face, RANDOM_SEED, this, 1,60);
+		rbm.initJoints(scene, face, RANDOM_SEED, this, 1,100);
 		return scene;
 	}
 
