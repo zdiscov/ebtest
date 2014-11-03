@@ -84,8 +84,11 @@ public class AppleManager {
 							FireWorks fworks = new FireWorks();
 							//fworks.startFireworksExplosion(apples.getX(), apples.getY(), iParticleCount, dInitVel, dSpreading, iDecelerationPercent, startRed, endRed, startGreen, endGreen, startBlue, endBlue, engine, particleTextureRegion, vertexBufferObjectManager);
 							//fworks.bubbleBurst(explosionSound, rand, afterBurstBackground, scene, text);
-							fworks.startFireworksExplosion(apples.getX(),apples.getY(),20,4,0.5f,90, 1.0f, 1.0f, 1.0f,0f,0f,0f,mMainActivity.getEngine(),particleTextureRegion,mMainActivity.getVertexBufferObjectManager());						
-
+							fworks.startFireworksExplosion(apples.getX(),apples.getY(),40,4,0.5f,90, 1.0f, 0.5f, 1.0f,0f,0f,1f,mMainActivity.getEngine(),particleTextureRegion,mMainActivity.getVertexBufferObjectManager());						
+							Sounds crunchSound = new Sounds();
+					  		crunchSound.playSound(mMainActivity, mScene,"ricecrunch.mp3",false,false);
+					  		//crunchSound.playSound(mMainActivity, mScene,"ricecrunch.mp3",false,false);
+					  		
 						}
 //						try{
 //							MainActivity.mScoreText.setText(String.format("Apples - %d", mScore.getScoreCount()));                            

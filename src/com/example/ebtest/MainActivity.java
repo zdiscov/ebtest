@@ -4,6 +4,8 @@ package com.example.ebtest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.Random;
 
 import org.andengine.audio.music.MusicFactory;
@@ -99,7 +101,7 @@ import android.widget.Toast;
  * @author Nicolas Gramlich
  * @since 00:06:23 - 11.07.2010
  */
-public class MainActivity extends SimpleBaseGameActivity {
+public class MainActivity extends SimpleBaseGameActivity  {
 	// ===========================================================
 	// Constantsfa
 	// ===========================================================
@@ -136,7 +138,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 	 private Rectangle redRectangle;
      private static int health;
      private static Rectangle healthbar;
-     private String[] backgroundNames = new String[]{"background.png","greenbackground.png","flowers.png"};
+     private String[] backgroundNames = new String[]{"blackbackground.png","background.png","greenbackground.png","flowers.png"};
      private String[] homeNames = new String[]{"applehousesmall.png"};
      private int stageCount = 0;
     // boolean stageEndReached = false;
@@ -149,7 +151,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		Font mFont;
 	// ===========================================================
 	// Constructors
-	// ===========================================================
+	// =====healthba======================================================
 		private TickerText mText;
 	private ITexture mAppleHouseTexture, mApplesTexture,mNotesTexture, mPauseTexture;
 	private ITextureRegion mAppleHouseTextureRegion; //, mApplesTextureRegion;
@@ -169,10 +171,10 @@ public class MainActivity extends SimpleBaseGameActivity {
 	private long mRandomSeed = 1234567890;
 	private ITextureRegion mPausedTextureRegion;
 	public ITextureRegion mNotesTextureRegion;
-	private Sound mExplosionSound;
+	private Sound mThemeSound;
 	private BitmapTextureAtlas mSoundTextureAtlas;
 	public static TickerText mScoreText;
-
+	RotatingBodyManager rbm;
 	// ===========================================================
 	// Methods for/from SuperClass/Interfaces
 	// ===========================================================
@@ -186,8 +188,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		Toast.makeText(this, "Also try tapping this AnalogOnScreenControl!", Toast.LENGTH_LONG).show();
 
 		this.mCamera = new Camera(0, 0, CAMERA_WIDTH, CAMERA_HEIGHT);
-
-		//return new EngineOptions(true, ScreenOrientation.LANDSCAPE_FIXED, new RatioResolutionPolicy(CAMERA_WIDTH, CAMERA_HEIGHT), this.mCamera);
+		//EngineOptions engineOptions = new EngineOptions(true, ScreenOrientation.LANDSCAPE_FIXED, new RatioResolutionPolicy(CAMERA_WIDTH, CAMERA_HEIGHT), this.mCamera);
 		EngineOptions engineOptions = new EngineOptions(true,ScreenOrientation.LANDSCAPE_FIXED,new FillResolutionPolicy(),this.mCamera);
 		engineOptions.getAudioOptions().setNeedsSound(true);
 		engineOptions.getAudioOptions().setNeedsMusic(true);
@@ -212,7 +213,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		} catch (TextureAtlasBuilderException e) {
 			Debug.e(e);
 		}
-
+		
 		this.mFont = FontFactory.create(this.getFontManager(), this.getTextureManager(), 256, 256, TextureOptions.BILINEAR, Typeface.create(Typeface.DEFAULT, Typeface.BOLD), 32);
 		this.mFont.load();
         //this.mBackgroundTexture = new BitmapTextureAtlas(this.g9etTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
@@ -220,7 +221,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		this.mOnScreenControlTexture = new BitmapTextureAtlas(this.getTextureManager(), 256, 128, TextureOptions.BILINEAR);
 		mybackgroundTextureAtlas =  new BitmapTextureAtlas(this.getTextureManager(), 1024, 1024, TextureOptions.NEAREST);
 		//mybackgroundTextureAtlas 
-		mbackgroundRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mybackgroundTextureAtlas, this, "background.png",0,0);
+		mbackgroundRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mybackgroundTextureAtlas, this, "blackbackground.png",0,0);
 		this.mOnScreenControlBaseTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_base.png", 0, 0);
 		this.mOnScreenControlKnobTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_knob.png", 128, 0);
 		this.mOnScreenControlTexture.load();
@@ -257,8 +258,8 @@ public class MainActivity extends SimpleBaseGameActivity {
 		
 		/* Create particle system */
 		this.mParticleSystemBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 256, 256, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
-		this.mPointTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mParticleSystemBitmapTextureAtlas, this, "bf7.png", 0, 0);
-
+//		this.mPointTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mParticleSystemBitmapTextureAtlas, this, "bf7.png", 0, 0);
+		this.mPointTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mParticleSystemBitmapTextureAtlas, this, "particle_point.png", 0, 0);
 //        BitmapTextureAtlas mParticleBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 512, 512, TextureOptions.BILINEAR);//
 //		this.mParticleTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mParticleBitmapTextureAtlas, this, "apples.png", 0, 0);
 
@@ -298,7 +299,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		/* Create sound resource */
 		MusicFactory.setAssetBasePath("mfx/");
 		try {
-			this.mExplosionSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "mfx/smb_over.mid");
+			this.mThemeSound = SoundFactory.createSoundFromAsset(this.mEngine.getSoundManager(), this, "mfx/smb_over.mid");
 		} catch (final IOException e) {
 			Debug.e(e);
 		}
@@ -318,6 +319,33 @@ public class MainActivity extends SimpleBaseGameActivity {
 		//create a SpriteBackground object.
 		SpriteBackground background = new SpriteBackground(0,0,0,spritebackground);
 		return background;
+	}
+	
+	@Override
+	protected void onPause()
+	{
+	    super.onPause();
+	    if (this.isGameLoaded())
+	        this.mThemeSound.pause();
+	}
+
+	@Override
+	protected synchronized void onResume()
+	{
+	    super.onResume();
+	    System.gc();
+	    if (this.isGameLoaded())
+	        this.mThemeSound.play(); 
+	}
+	@Override
+	protected void onDestroy()
+	{
+	    super.onDestroy();
+	        
+	    if (this.isGameLoaded())
+	    {
+	        System.exit(0);    
+	    }
 	}
 	@Override
 	public Scene onCreateScene() {
@@ -394,18 +422,11 @@ public class MainActivity extends SimpleBaseGameActivity {
 						if((mSecondExecTime - mFirstExecTime) > 1000){
 							stageCount++;
 							health = 100;
-							updatehealth(health);
+							//updatehealth(health);
 							stageCount = stageCount % (backgroundNames.length);
-							//scene.setBackground(getSpriteBackground(backgroundNames[stageCount]));
-							//scene.setBackground();
-							//create a Sprite object.
-							Sprite spritebackground = new Sprite(0,0,mbackgroundRegion,getVertexBufferObjectManager());
-							//create a SpriteBackground object.
+							scene.setBackground(getSpriteBackground(backgroundNames[stageCount]));
 							
-							SpriteBackground background = new SpriteBackground(0,0,0,spritebackground);
-							//set the background to scene
-							scene.setBackground(background);
-
+							//rbm.removeAllRectangleBodies();
 							//scene.setBackground(new Background());
 							//scene.setBackgroundEnabled(false);
 							mFirstExecTime = System.currentTimeMillis();
@@ -415,6 +436,10 @@ public class MainActivity extends SimpleBaseGameActivity {
 					  		List<AnimatedSprite> appleList = am.generateApplesWithCollissionSprite(mApplesCount, mApplesTextureRegion, face, getmPointTextureRegion());
 					  		for(int appleCount = 0; appleCount < appleList.size(); appleCount++)
 					  			scene.attachChild(appleList.get(appleCount));
+					  		
+							rbm.removeAllRectangleBodies(getMainActivity());
+							rbm.initJoints(scene, face, System.nanoTime(), getMainActivity(), 1 + stageCount%2,25 + stageCount*2);
+							//Toast.makeText(getApplicationContext(), "LEVEL - " + String.valueOf(stageCount), Toast.LENGTH_SHORT).show();
 					  
 						}
 				}
@@ -422,9 +447,9 @@ public class MainActivity extends SimpleBaseGameActivity {
 			}
 		});
 
-		mText = new TickerText(30, 20, this.mFont, "     ", new TickerTextOptions(HorizontalAlign.CENTER, 12), this.getVertexBufferObjectManager());
+		mText = new TickerText(30, 20, this.mFont, "        ", new TickerTextOptions(HorizontalAlign.CENTER, 12), this.getVertexBufferObjectManager());
 
-		mScoreText = new TickerText(CAMERA_WIDTH-200, 20, this.mFont,"           ", new TickerTextOptions(HorizontalAlign.CENTER, 10), this.getVertexBufferObjectManager());
+		mScoreText = new TickerText(CAMERA_WIDTH-200, 20, this.mFont,"           ", new TickerTextOptions(HorizontalAlign.CENTER, 12), this.getVertexBufferObjectManager());
 
 		mText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 		mScoreText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
@@ -434,8 +459,8 @@ public class MainActivity extends SimpleBaseGameActivity {
 		createTimer(this);
 		/* add health bar */
 	      health = 100;
-          healthbar = new Rectangle(0,0,health * 2,20,this.getVertexBufferObjectManager());
-          healthbar.setColor(0, 1.0f, 0);
+          healthbar = new Rectangle(0,0,CAMERA_HEIGHT,70,this.getVertexBufferObjectManager());
+          //healthbar.setColor(0, 1.0f, 0);
           healthbar.setAlpha(0.4f);
           scene.attachChild(healthbar);
 
@@ -463,10 +488,19 @@ public class MainActivity extends SimpleBaseGameActivity {
   		List<AnimatedSprite> appleList = am.generateApplesWithCollissionSprite(mApplesCount, mApplesTextureRegion, face, this.getmPointTextureRegion());
   		for(int appleCount = 0; appleCount < appleList.size(); appleCount++)
   			scene.attachChild(appleList.get(appleCount)); 		
-  		new Sounds(this, scene,"smb_over.mid",true);
-		RotatingBodyManager rbm = new RotatingBodyManager(scene, mCamera, mPhysicsWorld);
-		rbm.initJoints(scene, face, RANDOM_SEED, this, 1,60);
-		rbm.initJoints(scene, face, RANDOM_SEED, this, 1,100);
+  		
+  		Sounds mainSound = new Sounds();
+  		mainSound.playSound(this, scene,"smb_over.mid",true,true);
+  		
+		rbm = new RotatingBodyManager(scene, mCamera, mPhysicsWorld);
+		//rbm.initJoints(scene, face, RANDOM_SEED, this, 1,60);
+		//RANDOM_SEED = System.nanoTime();
+		//rbm.initJoints(scene, face, RANDOM_SEED, this, 1,30);
+
+		RANDOM_SEED = System.nanoTime();
+		rbm.removeAllRectangleBodies(getMainActivity());
+		rbm.initJoints(scene, face, RANDOM_SEED, this, 2,30);
+
 		return scene;
 	}
 
@@ -499,7 +533,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		            	
 		            	// this.mMainScene
 		            	getEngine().getScene().setChildScene(pScene.getPauseScene(), false, true, true);
-		            	getEngine().stop();
+		            	//getEngine().stop();
 		            }
 		            int seconds = (int) ((startTime / 1000) % 60);
 		            int minutes = (int) ((startTime / 1000) / 60);
@@ -509,6 +543,7 @@ public class MainActivity extends SimpleBaseGameActivity {
 		        }
 		    }));
 		}
+
 	
 	
 	// ===========================================================
