@@ -123,27 +123,30 @@ public class RotatingBodyManager {
 				continue;
 			}
 			//Object
+			
 			final Rectangle mGreenRectangle = new Rectangle(randFloatX * mCamera.getWidth()/4 + i*100, randFloatY + i*50 , 1, 1, activity.getVertexBufferObjectManager() );
 			mGreenRectangle.setColor(Color.TRANSPARENT);
 			scene.attachChild(mGreenRectangle);
 			rectangleBodySet.add(mGreenRectangle);
+			
 			//Object
 			// Create red rectangle
-			final Rectangle mRedRectangle = new Rectangle(randFloatX*mCamera.getWidth()/4 + i*100,  randFloatY + i*50, 1, rotBodyLength, activity.getVertexBufferObjectManager());
+			final Rectangle mRedRectangle = new Rectangle(randFloatX*mCamera.getWidth() - 100 + i*50,  randFloatY + i*100, 2, rotBodyLength, activity.getVertexBufferObjectManager());
 			mRedRectangle.setColor(Color.RED);
 			scene.attachChild(mRedRectangle);
 			rectangleBodySet.add(mRedRectangle);
 			//Object
 			// Create body for green rectangle (Static)
+			
 			Body mGreenBody = PhysicsFactory.createBoxBody(mPhysicsWorld, mGreenRectangle, BodyType.StaticBody, PhysicsFactory.createFixtureDef(0, 0, 0));
-	
+			
 			//Object
 			// Create body for red rectangle (Dynamic, for our arm)
-			Body mRedBody = PhysicsFactory.createBoxBody(mPhysicsWorld, mRedRectangle, BodyType.DynamicBody, PhysicsFactory.createFixtureDef(5, 0.5f, 0.5f));
+			Body mRedBody = PhysicsFactory.createBoxBody(mPhysicsWorld, mRedRectangle, BodyType.DynamicBody, PhysicsFactory.createFixtureDef(0.5f, 5f, 0.1f));
 	//		MassData massData = new MassData();
 	//		massData.mass = 1;
 	//		mRedBody.setMassData(massData);
-			allBodySet.add(mGreenBody);
+			/* allBodySet.add(mGreenBody); */
 			allBodySet.add(mRedBody);
 			PhysicsConnector pConnector = new PhysicsConnector(mRedRectangle, mRedBody, true, true);
 			physicsConnectorSet.add(pConnector);
@@ -152,10 +155,15 @@ public class RotatingBodyManager {
 			//Object
 			// Create revolute joint, connecting those two bodies 
 			final RevoluteJointDef revoluteJointDef = new RevoluteJointDef();
+			
 			revoluteJointDef.initialize(mGreenBody, mRedBody, mGreenBody.getWorldCenter());
+			
+			//revoluteJointDef.initialize(mRedBody, mRedBody, mRedBody.getWorldCenter());
+
 			revoluteJointDef.enableMotor = true;
 			revoluteJointDef.motorSpeed = (i%2 == 0 ? (-0.5f*i*0.5f): (0.5f*i*0.5f));
-	 		revoluteJointDef.maxMotorTorque = 100;
+	 		revoluteJointDef.maxMotorTorque = i*25;
+	 		
 	 		
 			Joint joint = mPhysicsWorld.createJoint(revoluteJointDef);
 
@@ -183,7 +191,8 @@ public class RotatingBodyManager {
 					
 					if(!mCamera.isRectangularShapeVisible(face)) {
 						face.setPosition(mCamera.getWidth()-20,mCamera.getHeight()/2 + 20);
-						mRedRectangle.setColor(1, 0, 1);
+						//mRedRectangle.setColor(1, 0, 1);
+						mRedRectangle.setColor(Color.RED);
 						//face.setPosition(100, 100);
 						//stageEndReached = true;
 						

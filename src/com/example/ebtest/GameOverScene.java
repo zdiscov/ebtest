@@ -42,28 +42,43 @@ public class GameOverScene {
 		TickerText mHighScoreText = new TickerText(camera.getWidth()-200, 40, mainActivity.mFont,"                ", new TickerTextOptions(HorizontalAlign.CENTER, 10), mainActivity.getVertexBufferObjectManager());
 
 		//mText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+		
+		
 		mScoreText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);	
 		mScoreText.setText(String.format("High Score - %d",mScore.getScoreCount()));
+		
 		try {
-			mScoreFromFile = Integer.valueOf(mScore.getLocalHighScoreFromFile(mainActivity.getApplicationContext()));
+			mScoreFromFile = Integer.valueOf(mScore.getLocalHighScoreFromFile());
 			if(mScore.getScoreCount() > mScoreFromFile){
-				mScore.setLocalHighScoreToFile(mainActivity.getApplicationContext(), mScore.getScoreCount());
+				mScore.setLocalHighScoreToFile(String.valueOf(mScore.getScoreCount()));
 			}
-		} catch (NumberFormatException e) {
+		} catch (Exception e) {
+			mScoreFromFile = mScore.getScoreCount();
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}finally{
+			
+		} finally{
 			if(mScoreFromFile == 0){
 				mScoreFromFile = mScore.getScoreCount();
 			}
 		}
-		mHighScoreText.setText(String.valueOf(mScoreFromFile));
+		
+		//mHighScoreText.setText(String.valueOf(mScoreFromFile));
+		
+
+		
+		mHighScoreText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);	
+
+		if(mScore.getScoreCount() < Integer.valueOf(mScoreFromFile)){
+	        mHighScoreText.setText(String.format("High Score - %s",(mScoreFromFile)));
+		}else{
+			try {
+				mScore.setLocalHighScoreToFile(String.valueOf(mScore.getScoreCount()));
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			mHighScoreText.setText(String.format("High Score - %s",(mScore.getScoreCount())));
+		}
 		mPauseScene.attachChild(mScoreText);
 
 	}

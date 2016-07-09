@@ -1,9 +1,15 @@
 package com.example.ebtest;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 
 import android.content.Context;
 import android.content.ContextWrapper;
@@ -49,7 +55,24 @@ public class Score {
 		m_scoreCount = 0;
 	}
 	
+	public void setLocalHighScoreToFile(String value) throws FileNotFoundException
+	{
+		File f = new File(ERASE_FILENAME);
+		PrintWriter pw = new PrintWriter(f);
+		pw.println(value);
+		pw.close();
+	}
 
+	public String getLocalHighScoreFromFile() throws FileNotFoundException, IOException
+	{
+		File f = new File(ERASE_FILENAME);
+		FileReader fr = new FileReader(f);
+		BufferedReader br = new BufferedReader(fr);
+		String data = br.readLine();
+		br.close();
+		return data;
+	}
+	/*
     public void setLocalHighScoreToFile(Context ctx, Integer value)
     {
         //String zero = "0";
@@ -62,16 +85,27 @@ public class Score {
         } catch (Exception e) {
             Log.i("Singleton Local High Score error",e.getLocalizedMessage());
         }
-
+        //m_scoreCount = 0;
     }
-    
+    */
+	/*
 	public String getLocalHighScoreFromFile(Context ctx) throws IOException, FileNotFoundException 
 	{
 		//char[] ch = new char[256];			
 		//ch[textToCompare.charAt(0)]++;
 		
 		FileInputStream fis;
+		
 		fis = ctx.openFileInput(ERASE_FILENAME);
+		
+		//InputStreamReader is = new InputStreamReader(fis);
+		File f = new File(ERASE_FILENAME);
+		fis = new FileInputStream(f);
+		 //BufferedInputStream buf = new BufferedInputStream(new FileInputStream(ERASE_FILENAME));
+		 
+		BufferedInputStream buf = new BufferedInputStream(fis);
+		 
+		
 		StringBuffer fileContent = new StringBuffer("");
 		byte[] buffer = new byte[1024];
 		
@@ -79,9 +113,11 @@ public class Score {
 		    fileContent.append(new String(buffer));
 		}
 		String temp = fileContent.toString();
+		//System.console().writer().write("******" + temp);
+		System.out.println("*****" + temp);
 		return temp;
 		//return fileContent.toString().equalsIgnoreCase(textToCompare);
 	}
-
+	*/
 
 }

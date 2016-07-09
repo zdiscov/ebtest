@@ -1,6 +1,8 @@
 package com.example.ebtest;
 
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -52,6 +54,7 @@ import org.andengine.entity.text.Text;
 import org.andengine.entity.text.TextOptions;
 import org.andengine.entity.text.TickerText;
 import org.andengine.entity.text.TickerText.TickerTextOptions;
+import org.andengine.entity.text.exception.OutOfCharactersException;
 import org.andengine.entity.util.FPSLogger;
 //import org.andengine.examples.ParticleSystemSimpleExample;
 import org.andengine.extension.physics.box2d.PhysicsConnector;
@@ -89,6 +92,7 @@ import com.badlogic.gdx.physics.box2d.MassData;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
+import android.content.Context;
 import android.graphics.Typeface;
 import android.hardware.SensorManager;
 import android.opengl.GLES20;
@@ -138,7 +142,8 @@ public class MainActivity extends SimpleBaseGameActivity  {
 	 private Rectangle redRectangle;
      private static int health;
      private static Rectangle healthbar;
-     private String[] backgroundNames = new String[]{"blackbackground.png","background.png","greenbackground.png","flowers.png"};
+     //private String[] backgroundNames = new String[]{"blackbackground.png","GreenBubbles.jpg","HandPrints.jpg","background.png","greenbackground.png","flowers.png"};
+     private String[] backgroundNames = new String[]{"bluesparkle.png","GreenBubbles.jpg","Stars.jpg","OrangeCircles.jpg","greenbackground.png","flowers.png"};
      private String[] homeNames = new String[]{"applehousesmall.png"};
      private int stageCount = 0;
     // boolean stageEndReached = false;
@@ -173,7 +178,7 @@ public class MainActivity extends SimpleBaseGameActivity  {
 	public ITextureRegion mNotesTextureRegion;
 	private Sound mThemeSound;
 	private BitmapTextureAtlas mSoundTextureAtlas;
-	public static TickerText mScoreText;
+	public static TickerText mScoreText, mHighScoreText;
 	RotatingBodyManager rbm;
 	// ===========================================================
 	// Methods for/from SuperClass/Interfaces
@@ -182,7 +187,15 @@ public class MainActivity extends SimpleBaseGameActivity  {
 	{
 		return this;
 	}
-	
+	/*
+	private void writeValuesToFile(String textToWrite) throws IOException
+	{
+		FileOutputStream fos;
+        fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
+        fos.write(textToWrite.getBytes());
+		fos.close();
+	}
+	 */
 	@Override
 	public EngineOptions onCreateEngineOptions() {
 		Toast.makeText(this, "Also try tapping this AnalogOnScreenControl!", Toast.LENGTH_LONG).show();
@@ -214,14 +227,14 @@ public class MainActivity extends SimpleBaseGameActivity  {
 			Debug.e(e);
 		}
 		
-		this.mFont = FontFactory.create(this.getFontManager(), this.getTextureManager(), 256, 256, TextureOptions.BILINEAR, Typeface.create(Typeface.DEFAULT, Typeface.BOLD), 32);
+		this.mFont = FontFactory.create(this.getFontManager(), this.getTextureManager(), 128, 128, TextureOptions.BILINEAR, Typeface.create(Typeface.SERIF, Typeface.BOLD), 16);
 		this.mFont.load();
         //this.mBackgroundTexture = new BitmapTextureAtlas(this.g9etTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
         //this.bgTexture = new BitmapTextureAtlas(this.getTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
 		this.mOnScreenControlTexture = new BitmapTextureAtlas(this.getTextureManager(), 256, 128, TextureOptions.BILINEAR);
 		mybackgroundTextureAtlas =  new BitmapTextureAtlas(this.getTextureManager(), 1024, 1024, TextureOptions.NEAREST);
 		//mybackgroundTextureAtlas 
-		mbackgroundRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mybackgroundTextureAtlas, this, "blackbackground.png",0,0);
+		mbackgroundRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mybackgroundTextureAtlas, this, backgroundNames[0],0,0);
 		this.mOnScreenControlBaseTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_base.png", 0, 0);
 		this.mOnScreenControlKnobTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mOnScreenControlTexture, this, "onscreen_control_knob.png", 128, 0);
 		this.mOnScreenControlTexture.load();
@@ -276,7 +289,7 @@ public class MainActivity extends SimpleBaseGameActivity  {
 			this.mPauseTextureRegion = TextureRegionFactory.extractFromTexture(this.mPauseTexture);
 		} catch (IOException e) {
 			Debug.e(e);
-		}
+		}	
 		/* Create and load sound */
 
 		//this.mNotesTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mSoundTextureAtlas, this.getApplicationContext(), "notes.png");
@@ -447,15 +460,20 @@ public class MainActivity extends SimpleBaseGameActivity  {
 			}
 		});
 
-		mText = new TickerText(30, 20, this.mFont, "        ", new TickerTextOptions(HorizontalAlign.CENTER, 12), this.getVertexBufferObjectManager());
+		mText = new TickerText(30, 20, this.mFont, "        ", new TickerTextOptions(HorizontalAlign.CENTER, 8), this.getVertexBufferObjectManager());
 
-		mScoreText = new TickerText(CAMERA_WIDTH-200, 20, this.mFont,"           ", new TickerTextOptions(HorizontalAlign.CENTER, 12), this.getVertexBufferObjectManager());
+		mScoreText = new TickerText(CAMERA_WIDTH-200, 20, this.mFont,"           ", new TickerTextOptions(HorizontalAlign.CENTER, 8), this.getVertexBufferObjectManager());
+
+		mHighScoreText = new TickerText(CAMERA_WIDTH-200, 8, this.mFont,"           ", new TickerTextOptions(HorizontalAlign.CENTER, 6), this.getVertexBufferObjectManager());
 
 		mText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 		mScoreText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+		mHighScoreText.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 		
 		scene.attachChild(mScoreText);
 		scene.attachChild(mText);
+		scene.attachChild(mHighScoreText);
+		
 		createTimer(this);
 		/* add health bar */
 	      health = 100;
@@ -499,7 +517,9 @@ public class MainActivity extends SimpleBaseGameActivity  {
 
 		RANDOM_SEED = System.nanoTime();
 		rbm.removeAllRectangleBodies(getMainActivity());
-		rbm.initJoints(scene, face, RANDOM_SEED, this, 2,30);
+		int numberOfRotators = (int)Math.random()%10;
+		
+		rbm.initJoints(scene, face, RANDOM_SEED, this, numberOfRotators,30);
 
 		return scene;
 	}
@@ -521,6 +541,9 @@ public class MainActivity extends SimpleBaseGameActivity  {
 	   private void createTimer(final MainActivity mainActivity) {
 		    final float period = 1; //one second
 		    mScore = Score.getScoreSingletonInstance();
+		   // final int temp = mScore.getScoreCount();
+
+		    mScore.resetScore();
 		    this.getEngine().registerUpdateHandler(timerHandler = new TimerHandler(period, new ITimerCallback() {                      
 		        public void onTimePassed(final TimerHandler pTimerHandler) {
 		            timerHandler.reset();
@@ -531,15 +554,56 @@ public class MainActivity extends SimpleBaseGameActivity  {
 		            if(totSeconds < 0){
 		            	GameOverScene pScene = new GameOverScene(getEngine().getCamera(), mPauseTextureRegion, getEngine().getVertexBufferObjectManager(),mainActivity);
 		            	
-		            	// this.mMainScene
+		            	
+						//mScore.setLocalHighScoreToFile(getApplicationContext(), mScore.getScoreCount());
+						//mScore.setLocalHighScoreToFile(String.valueOf(mScore.getScoreCount()));						
+		            	try {
+							mScore.setLocalHighScoreToFile(String.valueOf(mScore.getScoreCount()));
+						} catch (FileNotFoundException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}						
+		            	
 		            	getEngine().getScene().setChildScene(pScene.getPauseScene(), false, true, true);
 		            	//getEngine().stop();
 		            }
 		            int seconds = (int) ((startTime / 1000) % 60);
 		            int minutes = (int) ((startTime / 1000) / 60);
-		          mText.setText(String.format("%d:%02d", minutes, seconds));   
-		      	
+		            
+		            
+		          mText.setText(String.format("%d:%02d", minutes, seconds));   		      	
 		          mScoreText.setText(String.format("Score - %d",mScore.getScoreCount()));
+		          try {
+					mHighScoreText.setText(String.format("High Score - %s",mScore.getLocalHighScoreFromFile()));
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} 
+		          
+		          String pText="";
+				/*
+		          try {
+					pText = mScore.getLocalHighScoreFromFile(getApplicationContext());
+					try{
+						if(Integer.valueOf(pText) > mScore.getScoreCount()){
+							mScore.setLocalHighScoreToFile(getApplicationContext(), Integer.valueOf(pText));
+						}
+					}catch(Exception ex){
+						mScore.setLocalHighScoreToFile(getApplicationContext(), 0);
+						
+						
+					}
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					mScore.setLocalHighScoreToFile(getApplicationContext(), 0);
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					mScore.setLocalHighScoreToFile(getApplicationContext(), 0);
+				}
+				*/
+		         // mHighScoreText.setText(String.format("High Score - %s",pText));
 		        }
 		    }));
 		}
